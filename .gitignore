@@ -1,0 +1,8 @@
+.vscode
+build
+
+libs/**/*
+!libs/glad
+
+.DS_Store
+.cmake
