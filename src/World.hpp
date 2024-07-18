@@ -54,19 +54,12 @@ namespace KM {
         int y1 = 0;
         int z1 = 0;
         
-        GLuint vao = -1;
-        GLuint vbo = -1;
-        GLuint ibo = -1;
+        GLuint vao[2];
+        GLuint vbo[2];
+        GLuint ibo[2];
 
-        GLuint vaoLayer1 = -1;
-        GLuint vboLayer1 = -1;
-        GLuint iboLayer1 = -1;
-
-        int lasIndexCount = 0;
-        int indexCount = 0;
-
-        int lasIndexCountLayer1 = 0;
-        int indexCountLayer1 = 0;
+        int lastIndexCount[2] = { 0 };
+        int indexCount[2] = { 0 };
 
         bool dirty = true;
 

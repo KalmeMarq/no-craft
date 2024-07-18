@@ -367,22 +367,16 @@ namespace KM {
         this->x1 = x0 + 16;
         this->y1 = y0 + 64;
         this->z1 = z0 + 16;
-        glGenVertexArrays(1, &this->vao);
-        glGenBuffers(1, &this->vbo);
-        glGenBuffers(1, &this->ibo);
-        glGenVertexArrays(1, &this->vaoLayer1);
-        glGenBuffers(1, &this->vboLayer1);
-        glGenBuffers(1, &this->iboLayer1);
+        glGenVertexArrays(2, this->vao);
+        glGenBuffers(2, this->vbo);
+        glGenBuffers(2, this->ibo);
         this->dirty = true;
     }
 
     Chunk::~Chunk() {
-        glDeleteVertexArrays(1, &this->vao);
-        glDeleteBuffers(1, &this->vbo);
-        glDeleteBuffers(1, &this->ibo);
-        glDeleteVertexArrays(1, &this->vaoLayer1);
-        glDeleteBuffers(1, &this->vboLayer1);
-        glDeleteBuffers(1, &this->iboLayer1);
+        glDeleteVertexArrays(2, this->vao);
+        glDeleteBuffers(2, this->vbo);
+        glDeleteBuffers(2, this->ibo);
     }
 
     void Chunk::rebuildGeometry(int layer) {
@@ -396,83 +390,43 @@ namespace KM {
             }
         }
 
-        if (layer == 0) {
-            int vertexCount = vertices.size();
-            int indexCount = vertexCount / 4 * 6;
+        int vertexCount = vertices.size();
+        int indexCount = vertexCount / 4 * 6;
 
-            glBindVertexArray(this->vao);
-            glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        glBindVertexArray(this->vao[layer]);
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo[layer]);
 
-            glBufferData(GL_ARRAY_BUFFER, sizeof(KM::Vertex) * vertices.size(), &vertices[0], GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(KM::Vertex) * vertices.size(), &vertices[0], GL_DYNAMIC_DRAW);
 
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)(3 * sizeof(float)));
-            glEnableVertexAttribArray(2);
-            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)((3 + 4) * sizeof(float)));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)((3 + 4) * sizeof(float)));
 
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ibo[layer]);
 
-            if (this->lasIndexCount < indexCount) {
-                std::vector<unsigned int> index;
+        if (this->lastIndexCount[layer] < indexCount) {
+            std::vector<unsigned int> index;
 
-                for (int i = 0; i < indexCount; ++i) {
-                    index.push_back(i * 4);
-                    index.push_back(i * 4 + 1);
-                    index.push_back(i * 4 + 2);
-                    index.push_back(i * 4 + 2);
-                    index.push_back(i * 4 + 3);
-                    index.push_back(i * 4);
-                }
-
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), &index[0], GL_DYNAMIC_DRAW);
-                this->lasIndexCount = indexCount;
+            for (int i = 0; i < indexCount; ++i) {
+                index.push_back(i * 4);
+                index.push_back(i * 4 + 1);
+                index.push_back(i * 4 + 2);
+                index.push_back(i * 4 + 2);
+                index.push_back(i * 4 + 3);
+                index.push_back(i * 4);
             }
 
-            glBindVertexArray(0);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            this->indexCount = indexCount;
-        } else if (layer == 1) {
-            int vertexCount = vertices.size();
-            int indexCount = vertexCount / 4 * 6;
-
-            glBindVertexArray(this->vaoLayer1);
-            glBindBuffer(GL_ARRAY_BUFFER, this->vboLayer1);
-
-            glBufferData(GL_ARRAY_BUFFER, sizeof(KM::Vertex) * vertices.size(), &vertices[0], GL_DYNAMIC_DRAW);
-
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)(3 * sizeof(float)));
-            glEnableVertexAttribArray(2);
-            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)((3 + 4) * sizeof(float)));
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->iboLayer1);
-
-            if (this->lasIndexCountLayer1 < indexCount) {
-                std::vector<unsigned int> index;
-
-                for (int i = 0; i < indexCount; ++i) {
-                    index.push_back(i * 4);
-                    index.push_back(i * 4 + 1);
-                    index.push_back(i * 4 + 2);
-                    index.push_back(i * 4 + 2);
-                    index.push_back(i * 4 + 3);
-                    index.push_back(i * 4);
-                }
-
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), &index[0], GL_DYNAMIC_DRAW);
-                this->lasIndexCountLayer1 = indexCount;
-            }
-
-            glBindVertexArray(0);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            this->indexCountLayer1 = indexCount;
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), &index[0], GL_DYNAMIC_DRAW);
+            this->lastIndexCount[layer] = indexCount;
         }
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        this->indexCount[layer] = indexCount;
     }
 
     void Chunk::render() {
@@ -488,15 +442,9 @@ namespace KM {
             this->dirty = false;
         }
 
-        if (layer == 0 && this->indexCount > 0) {
-            glBindVertexArray(this->vao);
-            glDrawElements(GL_TRIANGLES, this->indexCount, GL_UNSIGNED_INT, 0);
-            glBindVertexArray(0);
-        }
-
-        if (layer == 1 && this->indexCountLayer1 > 0) {
-            glBindVertexArray(this->vaoLayer1);
-            glDrawElements(GL_TRIANGLES, this->indexCountLayer1, GL_UNSIGNED_INT, 0);
+        if (this->indexCount[layer] > 0) {
+            glBindVertexArray(this->vao[layer]);
+            glDrawElements(GL_TRIANGLES, this->indexCount[layer], GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
         }
     }
