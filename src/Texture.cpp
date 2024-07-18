@@ -10,7 +10,7 @@ void Texture::LoadFromFile(const char *name)
     this->SetFilter(TextureFilter::NEAREST);
 
     int nrChannels;
-    unsigned char *data = stbi_load((std::string("res/textures/") + name).c_str(), &m_width, &m_height, &nrChannels, 4); 
+    unsigned char *data = stbi_load((std::string(RESOURCES_PATH "textures/") + name).c_str(), &m_width, &m_height, &nrChannels, 4); 
 
     glTextureStorage2D(m_id, 1, GL_RGBA8, m_width, m_height);
     glTextureSubImage2D(m_id, 0, 0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, data);

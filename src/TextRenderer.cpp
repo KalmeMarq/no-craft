@@ -22,7 +22,7 @@ void TextRenderer::Init()
 
     std::cout << "Loading Default Font\n";
     int width, height, nrChannels;
-    unsigned char *data = stbi_load("res/textures/default.png", &width, &height, &nrChannels, 4);
+    unsigned char *data = stbi_load(RESOURCES_PATH "textures/default.png", &width, &height, &nrChannels, 4);
 
     for(int i = 0; i < 256; ++i) {
         int col = i % 16;

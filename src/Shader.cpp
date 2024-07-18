@@ -8,8 +8,8 @@ void Shader::Init(const char *name)
     std::ifstream vShaderFile;
     std::ifstream fShaderFile;
 
-    vShaderFile.open(std::string("res/shaders/") + name + ".vsh.glsl");
-    fShaderFile.open(std::string("res/shaders/") + name + ".fsh.glsl");
+    vShaderFile.open(std::string(RESOURCES_PATH "shaders/") + name + ".vsh.glsl");
+    fShaderFile.open(std::string(RESOURCES_PATH "shaders/") + name + ".fsh.glsl");
     
     std::stringstream vShaderStream, fShaderStream;
 

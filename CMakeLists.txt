@@ -14,7 +14,7 @@ add_subdirectory(libs/glm)
 
 include_directories("libs/stb")
 
-file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 add_executable(
     km-opengl
@@ -28,12 +28,5 @@ target_link_libraries(
     glad    
 )
 
-set(source "${CMAKE_SOURCE_DIR}/res")
-set(destination "${CMAKE_CURRENT_BINARY_DIR}/res")
-
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${source} ${destination} 
-    DEPENDS ${destination}
-    COMMENT "symbolic link res folder from ${source} => ${destination}"
-)
+target_compile_definitions(km-opengl PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/res/")
+# target_compile_definitions(km-opengl PUBLIC RESOURCES_PATH="./res/")
