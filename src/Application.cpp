@@ -7,20 +7,21 @@
 struct BlockDef {
     int guiTextureIndex;
     int textureIndex[6];
+    int renderLayer;
 };
 
 #define BLOCK_COUNT 10
 static BlockDef BLOCKS_DEFS[BLOCK_COUNT] = {
-    { 0, { 0 } }, // Air
-    { 3, { 2, 0, 3, 3, 3, 3 } }, // Grass
-    { 2, { 2, 2, 2, 2, 2, 2 } }, // Dirt
-    { 1, { 1, 1, 1, 1, 1, 1 } }, // Stone
-    { 4, { 4, 4, 4, 4, 4, 4 } }, // Planks
-    { 16, { 16, 16, 16, 16, 16, 16 } }, // Cobblestone
-    { 17, { 17, 17, 17, 17, 17, 17 } }, // Bedrock
-    { 22, { 22, 22, 22, 22, 22, 22 } }, // Leaves
-    { 49, { 49, 49, 49, 49, 49, 49 } }, // Glass
-    { 20, { 21, 21, 20, 20, 20, 20 } } // Log
+    { 0, { 0 }, 0 }, // Air
+    { 3, { 2, 0, 3, 3, 3, 3 }, 0 }, // Grass
+    { 2, { 2, 2, 2, 2, 2, 2 }, 0 }, // Dirt
+    { 1, { 1, 1, 1, 1, 1, 1 }, 0 }, // Stone
+    { 4, { 4, 4, 4, 4, 4, 4 }, 0 }, // Planks
+    { 18, { 18, 18, 18, 18, 18, 18 }, 2 }, // Water
+    { 17, { 17, 17, 17, 17, 17, 17 }, 0 }, // Bedrock
+    { 22, { 22, 22, 22, 22, 22, 22 }, 1 }, // Leaves
+    { 49, { 49, 49, 49, 49, 49, 49 }, 1 }, // Glass
+    { 20, { 21, 21, 20, 20, 20, 20 }, 0 } // Log
 };
 
 int directionNormalVectors[6][3] = {
@@ -72,23 +73,13 @@ namespace KM {
         std::cout << "Loading Textures\n";
         m_terrainTexture.LoadFromFile("terrain.png");
         m_guiTexture.LoadFromFile("gui.png");
+        m_bgTexture.LoadFromFile("bg.png");
 
         std::cout << "Initializing TextRenderer\n";
         m_textRenderer.Init();
 
         std::cout << "Creating Chunks\n";
-        m_world = std::make_unique<World>(128, 128, 64);
-
-        int chunksX = m_world->getWidth() / 16;
-        int chunksZ = m_world->getHeight() / 16;
-        
-        for (int z = 0; z < chunksZ; ++z) {
-            for (int x = 0; x < chunksX; ++x) {
-                KM::Chunk *chunk = new KM::Chunk(m_world.get(), x * 16, 0, z * 16);
-                m_chunks.push_back(chunk); 
-            }
-        }
-        m_player.setWorld(m_world.get());
+        // this->StartWorld();
 
         std::cout << "GUI\n";
 
@@ -143,7 +134,7 @@ namespace KM {
         double tickTimeBehind = 0.0;
         double tickTargetTimeStep = 1.0 / 60.0;
 
-        this->SetMenu(new GameMenu());
+        this->SetMenu(new TitleMenu());
 
         while (this->m_running)
         {
@@ -238,7 +229,7 @@ namespace KM {
                 dY += directionVector[1];
                 dZ += directionVector[2];
 
-                if (this->m_player.bb.intersects({ (float) dX, (float) dY, (float) dZ, dX + 1.0f, dY + 0.5f, dZ + 1.0f }))
+                if (this->m_player->bb.intersects({ (float) dX, (float) dY, (float) dZ, dX + 1.0f, dY + 0.5f, dZ + 1.0f }))
                     return;
 
                 m_world->setBlockId(dX, dY, dZ, m_selectedItem + 1);
@@ -369,76 +360,122 @@ namespace KM {
         this->m_running = false;
     }
 
+    void Application::StartWorld()
+    {
+        m_world = new World(128, 128, 64);
+
+        int chunksX = m_world->getWidth() / 16;
+        int chunksZ = m_world->getHeight() / 16;
+        
+        for (int z = 0; z < chunksZ; ++z) {
+            for (int x = 0; x < chunksX; ++x) {
+                KM::Chunk *chunk = new KM::Chunk(m_world, x * 16, 0, z * 16);
+                m_chunks.push_back(chunk); 
+            }
+        }
+        m_player = new Player();
+        m_player->setWorld(m_world);
+        this->SetMenu(nullptr);
+    }
+
+    void Application::QuitWorld()
+    {
+        std::cout << "Clearing Chunks\n";
+        for (KM::Chunk *chunk : m_chunks) {
+            delete chunk;
+        }
+        m_chunks.clear();
+
+        delete m_player;
+        m_player = nullptr;
+        delete m_world;
+        m_world = nullptr;
+
+        this->SetMenu(new TitleMenu());
+    }
+
     void Application::Render()
     {
-        glClearColor(0.5f, 0.8f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-
-        this->RenderWorld();
-
-        glDisable(GL_DEPTH_TEST);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        if (this->m_world != nullptr) {
+            this->RenderWorld();
+        
+            glDisable(GL_DEPTH_TEST);
+            glClear(GL_DEPTH_BUFFER_BIT);
+        } else {
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
 
         this->RenderGui();
     }
 
     void Application::Tick()
     {
-       this->m_player.tick();
-
-        float mouseDeltaX = (float) this->m_mouseDelta[0];
-        float mouseDeltaY = (float) this->m_mouseDelta[1];
-        this->m_mouseDelta[0] = 0;
-        this->m_mouseDelta[1] = 0;
-
-        this->m_player.turn(mouseDeltaX, mouseDeltaY);
-
-        glm::vec3 start = glm::vec3(m_player.x, m_player.y, m_player.z);
-
-        float pitch = glm::radians(-m_player.pitch);
-        float yaw = glm::radians(-m_player.yaw + 180.0f);        
-
-        glm::vec3 dir;
-        dir.x = glm::cos(pitch) * glm::sin(yaw);
-        dir.y = glm::sin(pitch);
-        dir.z = glm::cos(pitch) * glm::cos(yaw);
-        dir = glm::normalize(dir);
+        if (this->m_menu == nullptr && this->m_player != nullptr) {
+            this->m_player->tick();
         
-        float reach = 5.0f;
-        glm::vec3 end = start + dir * reach;
-        m_hitResult = m_world->raycast(start, end);
+            float mouseDeltaX = (float) this->m_mouseDelta[0];
+            float mouseDeltaY = (float) this->m_mouseDelta[1];
+            this->m_mouseDelta[0] = 0;
+            this->m_mouseDelta[1] = 0;
+
+            this->m_player->turn(mouseDeltaX, mouseDeltaY);
+        
+            glm::vec3 start = glm::vec3(m_player->x, m_player->y, m_player->z);
+
+            float pitch = glm::radians(-m_player->pitch);
+            float yaw = glm::radians(-m_player->yaw + 180.0f);        
+
+            glm::vec3 dir;
+            dir.x = glm::cos(pitch) * glm::sin(yaw);
+            dir.y = glm::sin(pitch);
+            dir.z = glm::cos(pitch) * glm::cos(yaw);
+            dir = glm::normalize(dir);
+            
+            float reach = 5.0f;
+            glm::vec3 end = start + dir * reach;
+            m_hitResult = m_world->raycast(start, end);
+        }
     }
 
     void Application::RenderWorld()
     {
+        bool isInsideWater = this->m_player->isInsideWater;
+     
+        float fogR = isInsideWater ? 0.1f : 0.5f;
+        float fogG = isInsideWater ? 0.3f : 0.8f;
+        float fogB = isInsideWater ? 0.6f : 1.0f;
+
+        glClearColor(fogR, fogG, fogB, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+
         int w = m_window.GetWidth();
         int h = m_window.GetHeight();
-        glViewport(0, 0, w, h);
 
         glEnable(GL_CULL_FACE);
 
         glm::mat4 projection = glm::perspective(glm::radians(70.0f), (float) w / (float) h, 0.05f, 1000.0f);
         glm::mat4 modelView = glm::mat4(1.0f);
         modelView = glm::translate(modelView, glm::vec3(0.0f, 0.0f, -0.3f));
-        modelView = glm::rotate(modelView, glm::radians(m_player.pitch), glm::vec3(1.0f, 0.0f, 0.0f));
-        modelView = glm::rotate(modelView, glm::radians(m_player.yaw), glm::vec3(0.0f, 1.0f, 0.0f));
-        modelView = glm::translate(modelView, glm::vec3(-m_player.x, -m_player.y, -m_player.z));
+        modelView = glm::rotate(modelView, glm::radians(m_player->pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+        modelView = glm::rotate(modelView, glm::radians(m_player->yaw), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelView = glm::translate(modelView, glm::vec3(-m_player->x, -m_player->y, -m_player->z));
 
         m_terrainShader.Use();
         m_terrainShader.SetUniformMat4("uProjection", projection);
         m_terrainShader.SetUniformMat4("uModelView", modelView);
-        m_terrainShader.SetUniformFloat("uFogStart", 100);
-        m_terrainShader.SetUniformFloat("uFogEnd", 132);
-        m_terrainShader.SetUniformFloat4("uFogColor", 0.5f, 0.8f, 1.0f, 1.0f);
-        m_terrainShader.SetUniformFloat4("uPlayer", (float) m_player.x, (float) m_player.z, 0.0f, 0.0f);
+        m_terrainShader.SetUniformFloat("uFogStart", 50 + (isInsideWater ? -45 : 0));
+        m_terrainShader.SetUniformFloat("uFogEnd", 82 + (isInsideWater ? -45 : 0));
+        m_terrainShader.SetUniformFloat4("uFogColor", fogR, fogG, fogB, 1.0f);
+        m_terrainShader.SetUniformFloat4("uPlayer", (float) m_player->x, (float) m_player->z, 0.0f, 0.0f);
 
        glm::quat a(0.0f, 0.0f, 0.0f, 1.0f);
         {
-            float yaw = m_player.yaw + 180.0f;
-            float pitch = m_player.pitch;
+            float yaw = m_player->yaw + 180.0f;
+            float pitch = m_player->pitch;
             a = glm::rotate(a, glm::pi<float>() - yaw * ((float)glm::pi<float>() / 180), glm::vec3(0.0f, 1.0f, 0.0f));
             a = glm::rotate(a, -pitch * (glm::pi<float>() / 180), glm::vec3(1.0f, 0.0f, 0.0f));
             a = glm::rotate(a, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
@@ -446,9 +483,7 @@ namespace KM {
         }
         auto m = glm::mat4_cast(a);
 
-        Frustum frustum;
-        frustum.Init(m, projection);
-        frustum.SetPosition(m_player.x, m_player.y, m_player.z);
+        Frustum frustum(projection * modelView);
 
         m_terrainTexture.Bind(0);
         m_terrainShader.SetUniformInt("uSampler", 0);
@@ -460,11 +495,15 @@ namespace KM {
             chunkRendered++;
         }
 
+        for (auto chunk : m_chunks) {
+            chunk->render(1);
+        }
+
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         for (auto chunk : m_chunks) {
-            chunk->render(1);
+            chunk->render(2);
         }
         
         if (m_hitResult.has_value()) {
@@ -484,11 +523,6 @@ namespace KM {
 
     void Application::RenderGui()
     {
-        std::string version = (const char*) glGetString(GL_VERSION);
-        version = version.substr(0, version.find_first_of(' '));
-        std::string renderer = (const char*) glGetString(GL_RENDERER);
-        std::string vendor = (const char*) glGetString(GL_VENDOR);
-
         int w = m_window.GetWidth();
         int h = m_window.GetHeight();
 
@@ -504,41 +538,49 @@ namespace KM {
         m_texturedShader.SetUniformMat4("uProjection", projection);
         m_texturedShader.SetUniformMat4("uModelView", modelView);
 
-        m_textRenderer.DrawText("+", scaledWidth / 2 - 4, scaledHeight / 2 - 4, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), false);
+        if (this->m_world != nullptr && this->m_player != nullptr)
+        {
+            std::string version = (const char*) glGetString(GL_VERSION);
+            version = version.substr(0, version.find_first_of(' '));
+            std::string renderer = (const char*) glGetString(GL_RENDERER);
+            std::string vendor = (const char*) glGetString(GL_VENDOR);
 
-        if (m_showDebugInfo) {
-            m_textRenderer.DrawText("NoCraft (" + std::to_string(KM::Chunk::chunkUpdates) + " chunk updates)", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText(m_fpsString + " CR " + std::to_string(chunkRendered) + "/" + std::to_string(chunkTotal), 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText("X: " + std::to_string(m_player.x), 2, 32, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText("Y: " + std::to_string(m_player.y), 2, 42, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText("Z: " + std::to_string(m_player.z), 2, 52, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText("Pitch: " + std::to_string(m_player.pitch), 2, 62, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText("Yaw: " + std::to_string(m_player.yaw), 2, 72, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            m_textRenderer.DrawText("+", scaledWidth / 2 - 4, scaledHeight / 2 - 4, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), false);
 
-            if (m_hitResult.has_value()) {
-                m_textRenderer.DrawText("H XYZ: " + std::to_string(m_hitResult.value().x) + " " + std::to_string(m_hitResult.value().y) + " " + std::to_string(m_hitResult.value().z), 2, 92, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText("H Face: " + std::to_string(m_hitResult.value().face), 2, 102, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            if (m_showDebugInfo) {
+                m_textRenderer.DrawText("NoCraft (" + std::to_string(KM::Chunk::chunkUpdates) + " chunk updates)", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                m_textRenderer.DrawText(m_fpsString + " CR " + std::to_string(chunkRendered) + "/" + std::to_string(chunkTotal), 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                m_textRenderer.DrawText("X: " + std::to_string(m_player->x), 2, 32, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                m_textRenderer.DrawText("Y: " + std::to_string(m_player->y), 2, 42, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                m_textRenderer.DrawText("Z: " + std::to_string(m_player->z), 2, 52, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                m_textRenderer.DrawText("Pitch: " + std::to_string(m_player->pitch), 2, 62, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                m_textRenderer.DrawText("Yaw: " + std::to_string(m_player->yaw), 2, 72, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+                if (m_hitResult.has_value()) {
+                    m_textRenderer.DrawText("H XYZ: " + std::to_string(m_hitResult.value().x) + " " + std::to_string(m_hitResult.value().y) + " " + std::to_string(m_hitResult.value().z), 2, 92, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    m_textRenderer.DrawText("H Face: " + std::to_string(m_hitResult.value().face), 2, 102, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                }
+
+                std::string line = "Display: " + std::to_string(w) + "x" + std::to_string(h) + " (" + vendor + ")";
+                m_textRenderer.DrawAlignedText(line, scaledWidth - 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+                m_textRenderer.DrawAlignedText(renderer, scaledWidth - 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+                m_textRenderer.DrawAlignedText(version, scaledWidth - 2, 22, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+            } else {
+                m_textRenderer.DrawText("NoCraft", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             }
 
-            std::string line = "Display: " + std::to_string(w) + "x" + std::to_string(h) + " (" + vendor + ")";
-            m_textRenderer.DrawAlignedText(line, scaledWidth - 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
-            m_textRenderer.DrawAlignedText(renderer, scaledWidth - 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
-            m_textRenderer.DrawAlignedText(version, scaledWidth - 2, 22, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
-        } else {
-            m_textRenderer.DrawText("NoCraft", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        }
+            m_guiTexture.Bind(0);
+            m_texturedShader.SetUniformInt("uSampler", 0);
+            DrawTexture(scaledWidth / 2 - 91, scaledHeight - 22, 182, 22, 0, 0, 182, 22, 256, 256);
+            DrawTexture(scaledWidth / 2 - 91 + m_selectedItem * 20 + 1 - 2, scaledHeight - 22 - 1, 24, 24, 0, 22, 24, 24, 256, 256);
 
-        m_guiTexture.Bind(0);
-        m_texturedShader.SetUniformInt("uSampler", 0);
-        DrawTexture(scaledWidth / 2 - 91, scaledHeight - 22, 182, 22, 0, 0, 182, 22, 256, 256);
-        DrawTexture(scaledWidth / 2 - 91 + m_selectedItem * 20 + 1 - 2, scaledHeight - 22 - 1, 24, 24, 0, 22, 24, 24, 256, 256);
+            m_terrainTexture.Bind(0);
+            m_texturedShader.SetUniformInt("uSampler", 0);
 
-        m_terrainTexture.Bind(0);
-        m_texturedShader.SetUniformInt("uSampler", 0);
-
-        for (int i = 0; i < BLOCK_COUNT - 1; ++i) {
-            BlockDef *block = &BLOCKS_DEFS[i + 1];
-            DrawTexture(scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3, scaledHeight - 22 + 3, 16, 16, (block->guiTextureIndex % 16) * 16, (block->guiTextureIndex / 16) * 16, 16, 16, 256, 256);
+            for (int i = 0; i < BLOCK_COUNT - 1; ++i) {
+                BlockDef *block = &BLOCKS_DEFS[i + 1];
+                DrawTexture(scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3, scaledHeight - 22 + 3, 16, 16, (block->guiTextureIndex % 16) * 16, (block->guiTextureIndex / 16) * 16, 16, 16, 256, 256);
+            }
         }
 
         if (this->m_menu != nullptr) {
@@ -607,11 +649,9 @@ namespace KM {
     {
         if (tile == 0 || tile >= BLOCK_COUNT) return;
 
-        if (layer == 0 && (tile == 7 || tile == 8)) {
-            return;
-        }
+        BlockDef *block = &BLOCKS_DEFS[tile];
 
-        if (layer == 1 && tile != 7 && tile != 8) {
+        if (layer != block->renderLayer) {
             return;
         }
 
@@ -622,16 +662,40 @@ namespace KM {
         float y1 = blockPos.y + 1.0f;
         float z1 = blockPos.z + 1.0f;
 
-        BlockDef *block = &BLOCKS_DEFS[tile];
 
         float bB = 0.5f;
         float bT = 1.0f;
         float bNS = 0.8f;
         float bWE = 0.6f;
 
+        int blockIdDown = world->getBlockId(blockPos.Down());
+        int blockIdUp = world->getBlockId(blockPos.Up());
+        int blockIdNorth = world->getBlockId(blockPos.North());
+        int blockIdSouth = world->getBlockId(blockPos.South());
+        int blockIdWest = world->getBlockId(blockPos.West());
+        int blockIdEast = world->getBlockId(blockPos.East());
+        
+        bool isExposed = blockIdUp == 0 && tile == 5;
+
+        if (isExposed) {
+            y1 -= 0.1f;
+        }
+
+        /* TODO: Finish AO
+        */
+
+        // Credits: https://github.com/simondevyoutube/Quick_MinecraftClone2/blob/f911091c593e78a06ec59b3f49656d6a3b8f4a79/src/voxel-block-builder.js#L955
+        auto calcAO = [world, blockPos](int x, int y, int z) {
+            int bId = world->getBlockId(blockPos.x + x, blockPos.y + y, blockPos.z + z);
+            if (bId != 0 && bId != 8) {
+                return 0.75f;
+            }
+          return 1.0f;
+        };
+
         // B
 
-        if (world->getBlockId(blockPos.Down()) == 0 || world->getBlockId(blockPos.Down()) == 7 || (world->getBlockId(blockPos.Down()) == 8 && tile != 8)) {
+        if (blockIdDown == 0 || blockIdDown == 7 || (blockIdDown == 8 && tile != 8) || (blockIdDown == 5 && tile != 5)) {
             int u = ((block->textureIndex[0] % 16) * 16);
             int v = ((block->textureIndex[0] / 16) * 16);
             float u0 = u / 256.0f;
@@ -649,7 +713,7 @@ namespace KM {
         
         // T
 
-        if (world->getBlockId(blockPos.Up()) == 0 || world->getBlockId(blockPos.Up()) == 7 || (world->getBlockId(blockPos.Up()) == 8 && tile != 8)) {
+        if (blockIdUp == 0 || blockIdUp == 7 || (blockIdUp == 8 && tile != 8) || (blockIdUp == 5 && tile != 5)) {
             int u = ((block->textureIndex[1] % 16) * 16);
             int v = ((block->textureIndex[1] / 16) * 16);
             float u0 = u / 256.0f;
@@ -659,15 +723,43 @@ namespace KM {
 
             float b = bT * world->getBlockBrightness(blockPos.Up());
 
-            vertices.push_back({ x1, y1, z1, b, b, b, 1, u1, v1 });
-            vertices.push_back({ x1, y1, z0, b, b, b, 1, u1, v0 });
-            vertices.push_back({ x0, y1, z0, b, b, b, 1, u0, v0 });
-            vertices.push_back({ x0, y1, z1, b, b, b, 1, u0, v1 });
+            float aos[4] = {
+                calcAO(0, 1, 1) * calcAO(1, 1, 0) * calcAO(1, 1, 1),
+                calcAO(0, 1, -1) * calcAO(1, 1, 0) * calcAO(1, 1, -1),
+                calcAO(0, 1, -1) * calcAO(-1, 1, 0) * calcAO(-1, 1, -1),
+                calcAO(0, 1, 1) * calcAO(-1, 1, 0) * calcAO(-1, 1, 1),
+            };
+
+            float v0b = b * aos[0];
+            float v1b = b * aos[1];
+            float v2b = b * aos[2];
+            float v3b = b * aos[3];
+
+            vertices.push_back({ x1, y1, z1, v0b, v0b, v0b, 1, u1, v1 });
+            vertices.push_back({ x1, y1, z0, v1b, v1b, v1b, 1, u1, v0 });
+            vertices.push_back({ x0, y1, z0, v2b, v2b, v2b, 1, u0, v0 });
+            vertices.push_back({ x0, y1, z1, v3b, v3b, v3b, 1, u0, v1 });
+
+            if (tile == 5) {
+                int u = ((block->textureIndex[0] % 16) * 16);
+                int v = ((block->textureIndex[0] / 16) * 16);
+                float u0 = u / 256.0f;
+                float v0 = v / 256.0f;
+                float u1 = (u + 16.f) / 256.0f;
+                float v1 = (v + 16.f) / 256.0f;
+
+                float b = bB * world->getBlockBrightness(blockPos.Down());
+
+                vertices.push_back({ x0, y1, z1, b, b, b, 1, u0, v1 });
+                vertices.push_back({ x0, y1, z0, b, b, b, 1, u0, v0 });
+                vertices.push_back({ x1, y1, z0, b, b, b, 1, u1, v0 });
+                vertices.push_back({ x1, y1, z1, b, b, b, 1, u1, v1 });
+            }
         }
 
         // N
 
-        if (world->getBlockId(blockPos.North()) == 0 || world->getBlockId(blockPos.North()) == 7 || (world->getBlockId(blockPos.North()) == 8 && tile != 8)) {
+        if (blockIdNorth == 0 || blockIdNorth == 7 || (blockIdNorth == 8 && tile != 8)|| (blockIdNorth == 5 && tile != 5)) {
             int u = ((block->textureIndex[2] % 16) * 16);
             int v = ((block->textureIndex[2] / 16) * 16);
             float u0 = u / 256.0f;
@@ -677,15 +769,27 @@ namespace KM {
 
             float b = bNS * world->getBlockBrightness(blockPos.North());
 
-            vertices.push_back({ x0, y1, z0, b, b, b, 1, u1, v0 });
-            vertices.push_back({ x1, y1, z0, b, b, b, 1, u0, v0 });
-            vertices.push_back({ x1, y0, z0, b, b, b, 1, u0, v1 });
-            vertices.push_back({ x0, y0, z0, b, b, b, 1, u1, v1 });
+            float aos[4] = {
+                calcAO(-1, 0, -1) * calcAO(0, 1, -1) * calcAO(-1, 1, -1),
+                calcAO(1, 0, -1) * calcAO(0, 1, -1) * calcAO(1, 1, -1),
+                calcAO(1, 0, -1) * calcAO(0, -1, -1) * calcAO(1, -1, -1),
+                calcAO(-1, 0, -1) * calcAO(0, -1, -1) * calcAO(-1, -1, -1),
+            };
+
+            float v0b = b * aos[0];
+            float v1b = b * aos[1];
+            float v2b = b * aos[2];
+            float v3b = b * aos[3];
+
+            vertices.push_back({ x0, y1, z0, v0b, v0b, v0b, 1, u1, v0 });
+            vertices.push_back({ x1, y1, z0, v1b, v1b, v1b, 1, u0, v0 });
+            vertices.push_back({ x1, y0, z0, v2b, v2b, v2b, 1, u0, v1 });
+            vertices.push_back({ x0, y0, z0, v3b, v3b, v3b, 1, u1, v1 });
         }
 
         // S
 
-        if (world->getBlockId(blockPos.South()) == 0 || world->getBlockId(blockPos.South()) == 7 || (world->getBlockId(blockPos.South()) == 8 && tile != 8)) {
+        if (blockIdSouth == 0 || blockIdSouth == 7 || (blockIdSouth == 8 && tile != 8) || (blockIdSouth == 5 && tile != 5)) {
             int u = ((block->textureIndex[3] % 16) * 16);
             int v = ((block->textureIndex[3] / 16) * 16);
             float u0 = u / 256.0f;
@@ -695,15 +799,27 @@ namespace KM {
 
             float b = bNS * world->getBlockBrightness(blockPos.South());
 
-            vertices.push_back({ x0, y1, z1, b, b, b, 1, u0, v0 });
-            vertices.push_back({ x0, y0, z1, b, b, b, 1, u0, v1 });
-            vertices.push_back({ x1, y0, z1, b, b, b, 1, u1, v1 });
-            vertices.push_back({ x1, y1, z1, b, b, b, 1, u1, v0 });
+            float aos[4] = {
+                calcAO(-1, 0, 1) * calcAO(0, 1, 1) * calcAO(-1, 1, 1),
+                calcAO(1, 0, 1) * calcAO(0, -1, 1) * calcAO(1, -1, 1),
+                calcAO(-1, 0, 1) * calcAO(0, -1, 1) * calcAO(-1, -1, 1),
+                calcAO(1, 0, 1) * calcAO(0, 1, 1) * calcAO(1, 1, 1),
+            };
+
+            float v0b = b * aos[0];
+            float v1b = b * aos[1];
+            float v2b = b * aos[2];
+            float v3b = b * aos[3];
+
+            vertices.push_back({ x0, y1, z1, v0b, v0b, v0b, 1, u0, v0 });
+            vertices.push_back({ x0, y0, z1, v1b, v1b, v1b, 1, u0, v1 });
+            vertices.push_back({ x1, y0, z1, v2b, v2b, v2b, 1, u1, v1 });
+            vertices.push_back({ x1, y1, z1, v3b, v3b, v3b, 1, u1, v0 });
         }
 
         // W
 
-        if (world->getBlockId(blockPos.West()) == 0 || world->getBlockId(blockPos.West()) == 7 || (world->getBlockId(blockPos.West()) == 8 && tile != 8)) {
+        if (blockIdWest == 0 || blockIdWest == 7 || (blockIdWest == 8 && tile != 8) || (blockIdWest == 5 && tile != 5)) {
             int u = ((block->textureIndex[4] % 16) * 16);
             int v = ((block->textureIndex[4] / 16) * 16);
             float u0 = u / 256.0f;
@@ -713,15 +829,27 @@ namespace KM {
 
             float b = bWE * world->getBlockBrightness(blockPos.West());
 
-            vertices.push_back({ x0, y1, z1, b, b, b, 1, u1, v0 });
-            vertices.push_back({ x0, y1, z0, b, b, b, 1, u0, v0 });
-            vertices.push_back({ x0, y0, z0, b, b, b, 1, u0, v1 });
-            vertices.push_back({ x0, y0, z1, b, b, b, 1, u1, v1 });
+            float aos[4] = {
+                calcAO(-1, 0, -1) * calcAO(-1, 1, 0) * calcAO(-1, 1, -1),
+                calcAO(-1, 0, 1) * calcAO(-1, 1, 0) * calcAO(-1, 1, 1),
+                calcAO(-1, 0, -1) * calcAO(-1, -1, 0) * calcAO(-1, -1, -1),
+                calcAO(-1, 0, 1) * calcAO(-1, -1, 0) * calcAO(-1, -1, 1),
+            };
+
+            float v0b = b * aos[0];
+            float v1b = b * aos[1];
+            float v2b = b * aos[2];
+            float v3b = b * aos[3];
+
+            vertices.push_back({ x0, y1, z1, v0b, v0b, v0b, 1, u1, v0 });
+            vertices.push_back({ x0, y1, z0, v1b, v1b, v1b, 1, u0, v0 });
+            vertices.push_back({ x0, y0, z0, v2b, v2b, v2b, 1, u0, v1 });
+            vertices.push_back({ x0, y0, z1, v3b, v3b, v3b, 1, u1, v1 });
         }
 
         // E
 
-        if (world->getBlockId(blockPos.East()) == 0 || world->getBlockId(blockPos.East()) == 7 || (world->getBlockId(blockPos.East()) == 8 && tile != 8)) {
+        if (blockIdEast == 0 || blockIdEast == 7 || (blockIdEast == 8 && tile != 8) || (blockIdEast == 5 && tile != 5)) {
             int u = ((block->textureIndex[5] % 16) * 16);
             int v = ((block->textureIndex[5] / 16) * 16);
             float u0 = u / 256.0f;
@@ -731,10 +859,22 @@ namespace KM {
 
             float b = bWE * world->getBlockBrightness(blockPos.East());
 
-            vertices.push_back({ x1, y0, z1, b, b, b, 1, u0, v1 });
-            vertices.push_back({ x1, y0, z0, b, b, b, 1, u1, v1 });
-            vertices.push_back({ x1, y1, z0, b, b, b, 1, u1, v0 });
-            vertices.push_back({ x1, y1, z1, b, b, b, 1, u0, v0 });
+            float aos[4] = {
+                calcAO(1, 0, 1) * calcAO(1, -1, 0) * calcAO(1, -1, 1),
+                calcAO(1, 0, -1) * calcAO(1, -1, 0) * calcAO(1, -1, -1),
+                calcAO(1, 0, 1) * calcAO(1, 1, 0) * calcAO(1, 1, 1),
+                calcAO(1, 0, -1) * calcAO(1, 1, 0) * calcAO(1, 1, -1),
+            };
+
+            float v0b = b * aos[0];
+            float v1b = b * aos[1];
+            float v2b = b * aos[2];
+            float v3b = b * aos[3];
+
+            vertices.push_back({ x1, y0, z1, v0b, v0b, v0b, 1, u0, v1 });
+            vertices.push_back({ x1, y0, z0, v1b, v1b, v1b, 1, u1, v1 });
+            vertices.push_back({ x1, y1, z0, v2b, v2b, v2b, 1, u1, v0 });
+            vertices.push_back({ x1, y1, z1, v3b, v3b, v3b, 1, u0, v0 });
         }
     }
 

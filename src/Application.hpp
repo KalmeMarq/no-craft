@@ -29,8 +29,12 @@ namespace KM {
         
         void SetMenu(Menu *menu);
         void Shutdown();
+
+        void StartWorld();
+        void QuitWorld();
     public:
         Texture m_guiTexture;
+        Texture m_bgTexture;
         Shader m_texturedShader;
 
         static Application *GetInstance();
@@ -49,13 +53,13 @@ namespace KM {
     private:
         bool m_running { true };
         bool m_showDebugInfo { false };
-        Player m_player;
+        Player* m_player { nullptr };
         int m_selectedItem { 0 };
         bool m_mouseGrabbed { false };
         double m_mousePos[2] = {0};
         double m_mouseDelta[2] = {0};
         std::optional<HitResult> m_hitResult = std::nullopt;
-        std::unique_ptr<World> m_world;
+        World* m_world { nullptr };
         Shader m_defaultShader;
         Shader m_terrainShader;
         Texture m_terrainTexture;

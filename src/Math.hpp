@@ -77,99 +77,125 @@ namespace KM {
         BlockPos East();
     };
 
-    // Credits: JOML
-    struct FrustumIntersection
+    // Credits: https://gist.github.com/podgorskiy/e698d18879588ada9014768e3e82a644
+    class Frustum
     {
-        float nxX, nxY, nxZ, nxW;
-        float pxX, pxY, pxZ, pxW;
-        float nyX, nyY, nyZ, nyW;
-        float pyX, pyY, pyZ, pyW;
-        float nzX, nzY, nzZ, nzW;
-        float pzX, pzY, pzZ, pzW;
+    public:
+        Frustum() {}
 
-        glm::vec4 planes[6];
+        Frustum(glm::mat4 m);
 
-        void set(glm::mat4 m) {
-            nxX = m[0].w + m[0].x;
-            nxY = m[1].w + m[1].x;
-            nxZ = m[2].w + m[2].x;
-            nxW = m[3].w + m[3].x;
+        // http://iquilezles.org/www/articles/frustumcorrect/frustumcorrect.htm
+        bool IsVisible(const Box& box) const;
+        bool IsBoxVisible(const glm::vec3& minp, const glm::vec3& maxp) const;
 
-            planes[0] = glm::vec4(nxX, nxY, nxZ, nxW);
-            
-            pxX = m[0].w + m[0].x;
-            pxY = m[1].w + m[1].x;
-            pxZ = m[2].w + m[2].x;
-            pxW = m[3].w + m[3].x;
+    private:
+      enum Planes
+      {
+        Left = 0,
+        Right,
+        Bottom,
+        Top,
+        Near,
+        Far,
+        Count,
+        Combinations = Count * (Count - 1) / 2
+      };
 
-            planes[1] = glm::vec4(pxX, pxY, pxZ, pxW);
+      template<Planes i, Planes j>
+      struct ij2k
+      {
+        enum { k = i * (9 - i) / 2 + j - 1 };
+      };
 
-            nyX = m[0].w + m[0].y;
-            nyY = m[1].w + m[1].y;
-            nyZ = m[2].w + m[2].y;
-            nyW = m[3].w + m[3].y;
+      template<Planes a, Planes b, Planes c>
+      glm::vec3 intersection(const glm::vec3* crosses) const;
+      
+      glm::vec4   m_planes[Count];
+      glm::vec3   m_points[8];
+    };
 
-            planes[2] = glm::vec4(nyX, nyY, nyZ, nyW);
+    inline Frustum::Frustum(glm::mat4 m)
+    {
+      m = glm::transpose(m);
+      m_planes[Left]   = m[3] + m[0];
+      m_planes[Right]  = m[3] - m[0];
+      m_planes[Bottom] = m[3] + m[1];
+      m_planes[Top]    = m[3] - m[1];
+      m_planes[Near]   = m[3] + m[2];
+      m_planes[Far]    = m[3] - m[2];
 
-            pyX = m[0].w + m[0].y;
-            pyY = m[1].w + m[1].y;
-            pyZ = m[2].w + m[2].y;
-            pyW = m[3].w + m[3].y;
+      glm::vec3 crosses[Combinations] = {
+        glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Right])),
+        glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Bottom])),
+        glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Top])),
+        glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Near])),
+        glm::cross(glm::vec3(m_planes[Left]),   glm::vec3(m_planes[Far])),
+        glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Bottom])),
+        glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Top])),
+        glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Near])),
+        glm::cross(glm::vec3(m_planes[Right]),  glm::vec3(m_planes[Far])),
+        glm::cross(glm::vec3(m_planes[Bottom]), glm::vec3(m_planes[Top])),
+        glm::cross(glm::vec3(m_planes[Bottom]), glm::vec3(m_planes[Near])),
+        glm::cross(glm::vec3(m_planes[Bottom]), glm::vec3(m_planes[Far])),
+        glm::cross(glm::vec3(m_planes[Top]),    glm::vec3(m_planes[Near])),
+        glm::cross(glm::vec3(m_planes[Top]),    glm::vec3(m_planes[Far])),
+        glm::cross(glm::vec3(m_planes[Near]),   glm::vec3(m_planes[Far]))
+      };
 
-            planes[3] = glm::vec4(pyX, pyY, pyZ, pyW);
+      m_points[0] = intersection<Left,  Bottom, Near>(crosses);
+      m_points[1] = intersection<Left,  Top,    Near>(crosses);
+      m_points[2] = intersection<Right, Bottom, Near>(crosses);
+      m_points[3] = intersection<Right, Top,    Near>(crosses);
+      m_points[4] = intersection<Left,  Bottom, Far>(crosses);
+      m_points[5] = intersection<Left,  Top,    Far>(crosses);
+      m_points[6] = intersection<Right, Bottom, Far>(crosses);
+      m_points[7] = intersection<Right, Top,    Far>(crosses);
 
-            nzX = m[0].w + m[0].z;
-            nzY = m[1].w + m[1].z;
-            nzZ = m[2].w + m[2].z;
-            nzW = m[3].w + m[3].z;
+    }
 
-            planes[4] = glm::vec4(nzX, nzY, nzZ, nzW);
+    inline bool Frustum::IsVisible(const Box& box) const
+    {
+      return this->IsBoxVisible(glm::vec3(box.minX, box.minY, box.minZ), glm::vec3(box.maxX, box.maxY, box.maxZ));
+    }
 
-            pzX = m[0].w + m[0].z;
-            pzY = m[1].w + m[1].z;
-            pzZ = m[2].w + m[2].z;
-            pzW = m[3].w + m[3].z;
-
-            planes[5] = glm::vec4(pzX, pzY, pzZ, pzW);
-        }
-
-        bool TestAab(float minX, float minY, float minZ, float maxX, float maxY, float maxZ)
+    // http://iquilezles.org/www/articles/frustumcorrect/frustumcorrect.htm
+    inline bool Frustum::IsBoxVisible(const glm::vec3& minp, const glm::vec3& maxp) const
+    {
+      // check box outside/inside of frustum
+      for (int i = 0; i < Count; i++)
+      {
+        if ((glm::dot(m_planes[i], glm::vec4(minp.x, minp.y, minp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(maxp.x, minp.y, minp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(minp.x, maxp.y, minp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(maxp.x, maxp.y, minp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(minp.x, minp.y, maxp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(maxp.x, minp.y, maxp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(minp.x, maxp.y, maxp.z, 1.0f)) < 0.0) &&
+          (glm::dot(m_planes[i], glm::vec4(maxp.x, maxp.y, maxp.z, 1.0f)) < 0.0))
         {
-            return nxX * (nxX < 0 ? minX : maxX) + nxY * (nxY < 0 ? minY : maxY) + nxZ * (nxZ < 0 ? minZ : maxZ) >= -nxW &&
-               pxX * (pxX < 0 ? minX : maxX) + pxY * (pxY < 0 ? minY : maxY) + pxZ * (pxZ < 0 ? minZ : maxZ) >= -pxW &&
-               nyX * (nyX < 0 ? minX : maxX) + nyY * (nyY < 0 ? minY : maxY) + nyZ * (nyZ < 0 ? minZ : maxZ) >= -nyW &&
-               pyX * (pyX < 0 ? minX : maxX) + pyY * (pyY < 0 ? minY : maxY) + pyZ * (pyZ < 0 ? minZ : maxZ) >= -pyW &&
-               nzX * (nzX < 0 ? minX : maxX) + nzY * (nzY < 0 ? minY : maxY) + nzZ * (nzZ < 0 ? minZ : maxZ) >= -nzW &&
-               pzX * (pzX < 0 ? minX : maxX) + pzY * (pzY < 0 ? minY : maxY) + pzZ * (pzZ < 0 ? minZ : maxZ) >= -pzW;
+          return false;
         }
-    };
+      }
 
-    struct Frustum
+      // check frustum outside/inside box
+      int out;
+      out = 0; for (int i = 0; i<8; i++) out += ((m_points[i].x > maxp.x) ? 1 : 0); if (out == 8) return false;
+      out = 0; for (int i = 0; i<8; i++) out += ((m_points[i].x < minp.x) ? 1 : 0); if (out == 8) return false;
+      out = 0; for (int i = 0; i<8; i++) out += ((m_points[i].y > maxp.y) ? 1 : 0); if (out == 8) return false;
+      out = 0; for (int i = 0; i<8; i++) out += ((m_points[i].y < minp.y) ? 1 : 0); if (out == 8) return false;
+      out = 0; for (int i = 0; i<8; i++) out += ((m_points[i].z > maxp.z) ? 1 : 0); if (out == 8) return false;
+      out = 0; for (int i = 0; i<8; i++) out += ((m_points[i].z < minp.z) ? 1 : 0); if (out == 8) return false;
+
+      return true;
+    }
+
+    template<Frustum::Planes a, Frustum::Planes b, Frustum::Planes c>
+    inline glm::vec3 Frustum::intersection(const glm::vec3* crosses) const
     {
-        FrustumIntersection frustumIntersection;
-        float x = 0;
-        float y = 0;
-        float z = 0;
-
-        void Init(glm::mat4 positionMatrix, glm::mat4 projectionMatrix) {
-            this->frustumIntersection.set(positionMatrix * projectionMatrix);
-        }
-
-        void SetPosition(float x, float y, float z) {
-            this->x = x;
-            this->y = y;
-            this->z = z;
-        }
-
-        bool IsVisible(Box box) {
-            return true;
-            // float x0 = (float)(box.minX - this->x);
-            // float y0 = (float)(box.minY - this->y);
-            // float z0 = (float)(box.minZ - this->z);
-            // float x1 = (float)(box.maxX - this->x);
-            // float y1 = (float)(box.maxY - this->y);
-            // float z1 = (float)(box.maxZ - this->z);
-            // return this->frustumIntersection.TestAab(x0, y0, z0, x1, y1, z1);
-        }
-    };
+      float D = glm::dot(glm::vec3(m_planes[a]), crosses[ij2k<b, c>::k]);
+      glm::vec3 res = glm::mat3(crosses[ij2k<b, c>::k], -crosses[ij2k<a, c>::k], crosses[ij2k<a, b>::k]) *
+        glm::vec3(m_planes[a].w, m_planes[b].w, m_planes[c].w);
+      return res * (-1.0f / D);
+    }
 }

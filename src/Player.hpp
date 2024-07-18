@@ -21,6 +21,7 @@ namespace KM {
         float zd = 0.f;
         float yd = 0.f;
         bool onGround = false;
+        bool isInsideWater = false;
         KM::Box bb;
 
         Player();

@@ -42,7 +42,7 @@ namespace KM {
 
         Application *app = Application::GetInstance();
         
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && this->onGround) {
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && (this->onGround || this->isInsideWater)) {
             this->yd = 0.12f;
         }
 
@@ -67,11 +67,13 @@ namespace KM {
         }
 
         this->mouseRelative(xa, za, this->onGround ? 0.02f : 0.005f);
-        this->yd = (float) ((double) this->yd - 0.005);
+        this->yd -= 0.005f;
         this->move(this->xd, this->yd, this->zd);
         this->xd *= 0.91f;
-        this->yd *= 0.98f;
+        this->yd *= this->isInsideWater ? 0.99f : 0.98f;
         this->zd *= 0.91f;
+
+        this->isInsideWater = this->world->getBlockId(this->x, this->y, this->z) == 5;
 
         if (this->onGround) {
             this->xd *= 0.8F;

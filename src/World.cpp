@@ -39,16 +39,33 @@ namespace KM {
         world->setBlockId(x, y + 6, z + 1, 7);
     }
 
-    World::World(int width, int height, int depth) : m_width(width), m_height(height), m_depth(depth) {
+    void placeLake(KM::World *world, int x, int y, int z)
+    {
+        for (int yy = 0; yy < 3; ++yy)
+        {
+            for (int zz = 0; zz < 8; ++zz)
+            {
+                for (int xx = 0; xx < 8; ++xx)
+                {
+                    world->setBlockId(x + xx, y - yy, z + zz, 5);
+                }
+            }
+        } 
+    }
+
+    World::World(int width, int height, int depth) : m_width(width), m_height(height), m_depth(depth)
+    {
         this->m_blocks.reserve(this->m_width * this->m_height * this->m_depth);
         this->m_lightDepths.reserve(this->m_width * this->m_height);
 
         std::cout << "Generating World\n";
-        for (int x = 0; x < this->m_width; ++x) {
+        for (int y = 0; y < this->m_depth; ++y) {
+            int h = this->m_depth / 3;
+            int blockId = y == 0 ? 6 : y > h ? 0 : y < h ? y < h - 1 ? 3 : 2 : 1;
+            
             for (int z = 0; z < this->m_height; ++z) {
-                for (int y = 0; y < this->m_depth; ++y) {
-                    int h = this->m_depth / 3;
-                    this->m_blocks[(y * this->m_height + z) * this->m_width + x] = y == 0 ? 6 : y > h ? 0 : y < h ? y < h - 1 ? 3 : 2 : 1;
+                for (int x = 0; x < this->m_width; ++x) {
+                    this->m_blocks[(y * this->m_height + z) * this->m_width + x] = blockId;
                 }
             }
         }
@@ -63,6 +80,7 @@ namespace KM {
             placeOakTree(this, x, this->m_depth / 3 + 1, z);
         }
         
+        placeLake(this, 70, this->m_depth / 3, 70);
 
         this->recalculateLightDepths(0, 0, this->m_width, this->m_height);
     }
@@ -144,10 +162,11 @@ namespace KM {
 		int z0 = glm::clamp((int) box.minZ, 0, this->m_width);
 		int z1 = glm::clamp((int) (box.maxZ + 1.0F), 0, this->m_width);
 
-        for (int x = x0; x < x1; ++x) {
-			for (int y = y0; y < y1; ++y) {
-				for (int z = z0; z < z1; ++z) {
-					if (this->getBlockId(x, y, z) != 0) {
+        for (int y = y0; y < y1; ++y) {
+            for (int z = z0; z < z1; ++z) {
+                for (int x = x0; x < x1; ++x) {
+					int blockId = this->getBlockId(x, y, z);
+                    if (blockId != 0 && blockId != 5) {
 						cubeBoxes.push_back({ (float)x, (float)y, (float)z, (float)(x + 1), (float)(y + 1), (float)(z + 1) });
 					}
 				}
@@ -272,7 +291,7 @@ namespace KM {
             }
 
             int blockId = this->getBlockId(x, y, z);
-            if (blockId > 0) {
+            if (blockId > 0 && blockId != 5) {
                 std::optional<HitResult> result =  this->tileRaycast(x, y, z, start, end);
                 if (result.has_value()) {
                     return result;
@@ -367,16 +386,16 @@ namespace KM {
         this->x1 = x0 + 16;
         this->y1 = y0 + 64;
         this->z1 = z0 + 16;
-        glGenVertexArrays(2, this->vao);
-        glGenBuffers(2, this->vbo);
-        glGenBuffers(2, this->ibo);
+        glGenVertexArrays(3, this->vao);
+        glGenBuffers(3, this->vbo);
+        glGenBuffers(3, this->ibo);
         this->dirty = true;
     }
 
     Chunk::~Chunk() {
-        glDeleteVertexArrays(2, this->vao);
-        glDeleteBuffers(2, this->vbo);
-        glDeleteBuffers(2, this->ibo);
+        glDeleteVertexArrays(3, this->vao);
+        glDeleteBuffers(3, this->vbo);
+        glDeleteBuffers(3, this->ibo);
     }
 
     void Chunk::rebuildGeometry(int layer) {
@@ -439,13 +458,13 @@ namespace KM {
             chunkUpdates++;
             this->rebuildGeometry(0);
             this->rebuildGeometry(1);
+            this->rebuildGeometry(2);
             this->dirty = false;
         }
 
         if (this->indexCount[layer] > 0) {
             glBindVertexArray(this->vao[layer]);
             glDrawElements(GL_TRIANGLES, this->indexCount[layer], GL_UNSIGNED_INT, 0);
-            glBindVertexArray(0);
         }
     }
 

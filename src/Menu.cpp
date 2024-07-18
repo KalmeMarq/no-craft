@@ -72,7 +72,7 @@ namespace KM {
     void GameMenu::InitGui() {
         Button continueBtn(0, this->width / 2 - 100, this->height / 4 + 45, 200, 20, "Return to Game");
         this->m_buttons.push_back(continueBtn);
-        Button quitBtn(1, this->width / 2 - 100, this->height / 4 + 45 + 24, 200, 20, "Quit Game");
+        Button quitBtn(1, this->width / 2 - 100, this->height / 4 + 45 + 24, 200, 20, "Quit to Title Menu");
         this->m_buttons.push_back(quitBtn);
     }
 
@@ -96,10 +96,17 @@ namespace KM {
 
         if (button.id == 1)
         {
-            Application::GetInstance()->Shutdown();
+            Application::GetInstance()->QuitWorld();
         }
     }
-    
+
+    void GameMenu::Render(int mouseX, int mouseY)
+    {
+        Menu::Render(mouseX, mouseY);
+        Application *app = Application::GetInstance();
+        app->m_textRenderer.DrawAlignedText("Game Menu", this->width / 2, 30, glm::vec4(1.0f), 0.5f);
+    }
+
     void InventoryMenu::InitGui()
     {
     }
@@ -122,5 +129,48 @@ namespace KM {
         app->m_guiTexture.Bind(0);
         app->m_texturedShader.SetUniformInt("uSampler", 0);
         app->DrawTexture(20, 20, this->width - 40, this->height - 40, 182, 0, 4, 4, 256, 256);
+    }
+    
+    void TitleMenu::InitGui()
+    {
+        Button continueBtn(0, this->width / 2 - 100, this->height / 4 + 45, 200, 20, "Play");
+        this->m_buttons.push_back(continueBtn);
+        Button quitBtn(1, this->width / 2 - 100, this->height / 4 + 45 + 24, 200, 20, "Quit Game");
+        this->m_buttons.push_back(quitBtn);
+    }
+    
+    void TitleMenu::Resize(int width, int height)
+    {
+        Menu::Resize(width, height);
+
+        this->m_buttons[0].x = this->width / 2 - 100;
+        this->m_buttons[0].y = this->height / 4 + 45;
+
+        this->m_buttons[1].x = this->width / 2 - 100;
+        this->m_buttons[1].y = this->height / 4 + 45 + 24;
+    }
+    
+    void TitleMenu::ActionPerformed(Button &button)
+    {
+        if (button.id == 0)
+        {
+            Application::GetInstance()->StartWorld();
+        }
+
+        if (button.id == 1)
+        {
+            Application::GetInstance()->Shutdown();
+        }
+    }
+    
+    void TitleMenu::Render(int mouseX, int mouseY)
+    {
+        Application *app = Application::GetInstance();
+        app->m_bgTexture.Bind(0);
+        app->m_texturedShader.SetUniformInt("uSampler", 0);
+        app->DrawTexture(0, 0, this->width, this->height, 0, 0, this->width, this->height, 32, 32);
+        Menu::Render(mouseX, mouseY);
+
+        app->m_textRenderer.DrawAlignedText("NoCraft 0.0.1", this->width / 2, 30, glm::vec4(0.6f, 0.6f, 0.6f, 1.0f), 0.5f);
     }
 }

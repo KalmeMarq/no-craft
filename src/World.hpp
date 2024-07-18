@@ -54,12 +54,12 @@ namespace KM {
         int y1 = 0;
         int z1 = 0;
         
-        GLuint vao[2];
-        GLuint vbo[2];
-        GLuint ibo[2];
+        GLuint vao[3];
+        GLuint vbo[3];
+        GLuint ibo[3];
 
-        int lastIndexCount[2] = { 0 };
-        int indexCount[2] = { 0 };
+        int lastIndexCount[3] = { 0 };
+        int indexCount[3] = { 0 };
 
         bool dirty = true;
 

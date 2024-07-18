@@ -31,12 +31,22 @@ namespace KM {
         std::vector<Button> m_buttons;
     };
 
+    class TitleMenu : public Menu
+    {
+    public:
+        void InitGui() override;
+        void Resize(int width, int height) override;
+        void ActionPerformed(Button &button) override;
+        void Render(int mouseX, int mouseY) override;
+    };
+
     class GameMenu : public Menu
     {
     public:
         void InitGui() override;
         void Resize(int width, int height) override;
         void ActionPerformed(Button &button) override;
+        void Render(int mouseX, int mouseY) override;
     };
 
     class InventoryMenu : public Menu
