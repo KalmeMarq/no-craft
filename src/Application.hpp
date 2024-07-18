@@ -11,32 +11,33 @@
 #include "TextRenderer.hpp"
 
 namespace KM {
-    class Application {
+    class Application : public WindowEventHandler {
     public:
         Application();
         ~Application();
 
         void Run();
-        void OnResize();
-        void OnKey(int key, int scancode, int action, int mods);
-        void OnMouseButton(int button, int action, int mods);
-        void OnCursorPos(double x, double y);
-        void OnScroll(double x, double y);
+
+        void OnResize() override;
+        void OnKey(int key, int scancode, int action, int mods) override;
+        void OnMouseButton(int button, int action, int mods) override;
+        void OnCursorPos(double x, double y) override;
+        void OnScroll(double x, double y) override;
 
         static void RenderTile(std::vector<KM::Vertex> &vertices, KM::World *world, BlockPos blockPos, int tile, int layer);
         void DrawTexture(int x, int y, int w, int h, int u, int v, int us, int vs, int tw, int th);
         
+        void SetMenu(Menu *menu);
+        void Shutdown();
+    public:
         Texture m_guiTexture;
         Shader m_texturedShader;
 
         static Application *GetInstance();
         static Application *appInstance;
         TextRenderer m_textRenderer;
-
-        void SetMenu(Menu *menu);
-        void Shutdown();
+        GameWindow m_window;
     private:
-        
         void Render();
         void Tick();
 
@@ -45,7 +46,7 @@ namespace KM {
         
         void RenderSelectionBox(std::vector<KM::Vertex3FColor4F> &vertices, KM::HitResult &hitResult);
         int CalculateGuiScale(int width, int height);
-
+    private:
         bool m_running { true };
         bool m_showDebugInfo { false };
         Player m_player;
@@ -54,8 +55,7 @@ namespace KM {
         double m_mousePos[2] = {0};
         double m_mouseDelta[2] = {0};
         std::optional<HitResult> m_hitResult = std::nullopt;
-        GameWindow m_window;
-        World m_world;
+        std::unique_ptr<World> m_world;
         Shader m_defaultShader;
         Shader m_terrainShader;
         Texture m_terrainTexture;
@@ -68,6 +68,5 @@ namespace KM {
         int m_selectionVertexCount { 0 };
 
         Menu *m_menu;
-
     };
 }

@@ -6,11 +6,8 @@ void Texture::LoadFromFile(const char *name)
 {
     glCreateTextures(GL_TEXTURE_2D, 1, &m_id);
 
-    glTextureParameteri(m_id, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(m_id, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glTextureParameteri(m_id, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTextureParameteri(m_id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    this->SetWrap(TextureWrapping::REPEAT);
+    this->SetFilter(TextureFilter::NEAREST);
 
     int nrChannels;
     unsigned char *data = stbi_load((std::string("res/textures/") + name).c_str(), &m_width, &m_height, &nrChannels, 4); 
@@ -34,6 +31,20 @@ int Texture::GetWidth()
 int Texture::GetHeight()
 {
     return m_height;
+}
+
+void Texture::SetFilter(TextureFilter filter)
+{
+    int mode = filter == TextureFilter::NEAREST ? GL_NEAREST : GL_LINEAR;
+    glTextureParameteri(m_id, GL_TEXTURE_MIN_FILTER, mode);
+    glTextureParameteri(m_id, GL_TEXTURE_MAG_FILTER, mode);
+}
+
+void Texture::SetWrap(TextureWrapping wrap)
+{
+    int mode = wrap == TextureWrapping::CLAMP_TO_EDGE ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+    glTextureParameteri(m_id, GL_TEXTURE_WRAP_S, mode);
+    glTextureParameteri(m_id, GL_TEXTURE_WRAP_T, mode);
 }
 
 void Texture::Bind(int unit)

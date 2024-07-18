@@ -3,6 +3,16 @@
 #include <string>
 #include <iostream>
 
+enum class TextureFilter {
+    NEAREST,
+    LINEAR
+};
+
+enum class TextureWrapping {
+    CLAMP_TO_EDGE,
+    REPEAT
+};
+
 class Texture
 {
 public:
@@ -12,6 +22,9 @@ public:
 
     int GetWidth();
     int GetHeight();
+
+    void SetFilter(TextureFilter filter);
+    void SetWrap(TextureWrapping wrap);
 
     void Bind(int unit);
 private:

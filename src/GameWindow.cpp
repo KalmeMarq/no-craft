@@ -5,10 +5,11 @@
 namespace KM {
     GameWindow::~GameWindow()
     {
-        glfwTerminate();
+        if (this->m_handle != nullptr) 
+            glfwTerminate();
     }
 
-    bool GameWindow::Init(int width, int height, const char *title)
+    bool GameWindow::Init(int width, int height, const char *title, WindowEventHandler* eventHandler)
     {
         glfwSetErrorCallback([](int, const char* desc) { std::cerr << desc << "\n"; std::exit(EXIT_FAILURE); });
     
@@ -26,6 +27,7 @@ namespace KM {
         GLFWwindow* window = glfwCreateWindow(width, height, title, NULL, NULL);
 
         if (window == NULL) {
+            glfwTerminate();
             return false;
         }
         
@@ -42,9 +44,18 @@ namespace KM {
         glfwSetCursorPosCallback(window, cursorPosCallback);
         glfwSetScrollCallback(window, scrollCallback);
 
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        if (monitor != NULL) {
+            const GLFWvidmode* vidMode = glfwGetVideoMode(monitor);
+            if (vidMode != NULL) {
+                glfwSetWindowPos(window, (vidMode->width - width) / 2, (vidMode->height - height) / 2);
+            }
+        }
+
         glfwShowWindow(window);
 
         this->m_handle = window;
+        this->m_eventHandler = eventHandler;
         return true;
     }
 
@@ -79,71 +90,40 @@ namespace KM {
         glfwSwapInterval(flag);
     }
 
-    void GameWindow::AddResizeHandler(std::function<void(void)> handler)
-    {
-        this->resizeHandlers.push_back(handler);
-    }
-
-    void GameWindow::AddKeyboardHandler(std::function<void(int, int, int, int)> handler)
-    {
-        this->keyHandlers.push_back(handler);
-    }
-
-    void GameWindow::AddMouseButtonHandler(std::function<void(int, int, int)> handler)
-    {
-        this->mouseButtonHandlers.push_back(handler);
-    }
-
-    void GameWindow::AddScrollHandler(std::function<void(double, double)> handler)
-    {
-        this->scrollHandlers.push_back(handler);
-    }
-
-    void GameWindow::AddCursorPosHandler(std::function<void(double, double)> handler)
-    {
-        this->cursorPosHandlers.push_back(handler);
-    }
-
     void GameWindow::framebufferSizeCallback(GLFWwindow *win, int x, int y)
     {
         auto window = static_cast<GameWindow*>(glfwGetWindowUserPointer(win));
         window->m_width = x;
         window->m_height = y;
-
-        for (auto const &handler : window->resizeHandlers) {
-            handler();
-        }
+        if (window->m_eventHandler != nullptr)
+            window->m_eventHandler->OnResize();
     }
 
     void GameWindow::keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
         auto window = static_cast<GameWindow*>(glfwGetWindowUserPointer(win));
 
-        for (auto const &handler : window->keyHandlers) {
-            handler(key, scancode, action, mods);
-        }
+        if (window->m_eventHandler != nullptr)
+            window->m_eventHandler->OnKey(key, scancode, action, mods);
     }
 
     void GameWindow::mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
         auto window = static_cast<GameWindow*>(glfwGetWindowUserPointer(win));
 
-        for (auto const &handler : window->mouseButtonHandlers) {
-            handler(button, action, mods);
-        }
+         if (window->m_eventHandler != nullptr)
+            window->m_eventHandler->OnMouseButton(button, action, mods);
     }
 
     void GameWindow::scrollCallback(GLFWwindow* win, double x, double y) {
         auto window = static_cast<GameWindow*>(glfwGetWindowUserPointer(win));
 
-        for (auto const &handler : window->scrollHandlers) {
-            handler(x, y);
-        }
+        if (window->m_eventHandler != nullptr)
+            window->m_eventHandler->OnScroll(x, y);
     }
 
     void GameWindow::cursorPosCallback(GLFWwindow* win, double x, double y) {
         auto window = static_cast<GameWindow*>(glfwGetWindowUserPointer(win));
 
-        for (auto const &handler : window->cursorPosHandlers) {
-            handler(x, y);
-        }
+         if (window->m_eventHandler != nullptr)
+            window->m_eventHandler->OnCursorPos(x, y);
     }
 }

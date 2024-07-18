@@ -1,5 +1,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Application.hpp"
 
@@ -22,21 +23,31 @@ static BlockDef BLOCKS_DEFS[BLOCK_COUNT] = {
     { 20, { 21, 21, 20, 20, 20, 20 } } // Log
 };
 
+int directionNormalVectors[6][3] = {
+    { 0, -1, 0 },
+    { 0, 1, 0 },
+    { 0, 0, -1 },
+    { 0, 0, 1 },
+    { -1, 0, 0 },
+    { 1, 0, 0 }
+};
+
+static int chunkRendered = 0;
+static int chunkTotal = 0;
+
 namespace KM {
     Application *Application::appInstance { nullptr };
 
-    Application::Application() : m_textRenderer(&m_texturedShader), m_world(128, 128, 64), m_menu(nullptr)
+    Application::Application() : m_textRenderer(&m_texturedShader), m_menu(nullptr)
     {
         appInstance = this;
-        m_player.setWorld(&m_world);
     }
 
     Application::~Application()
     {
-        if (this->m_menu != nullptr) {
-            delete this->m_menu;
-        }
+        this->SetMenu(nullptr);
 
+        std::cout << "Clearing Chunks\n";
         for (KM::Chunk *chunk : m_chunks) {
             delete chunk;
         }
@@ -47,7 +58,10 @@ namespace KM {
     void Application::Run()
     {
         std::cout << "Creating Window\n";
-        m_window.Init(854, 480, "NoCraft");
+        if (!m_window.Init(854, 480, "NoCraft", this)) {
+            std::cout << "Failed to create Window\n";
+            return;
+        }
         m_window.SetVsync(false);
 
         std::cout << "Initializing Shaders\n";
@@ -63,15 +77,18 @@ namespace KM {
         m_textRenderer.Init();
 
         std::cout << "Creating Chunks\n";
-        int chunksX = m_world.getWidth() / 16;
-        int chunksZ = m_world.getHeight() / 16;
+        m_world = std::make_unique<World>(128, 128, 64);
 
+        int chunksX = m_world->getWidth() / 16;
+        int chunksZ = m_world->getHeight() / 16;
+        
         for (int z = 0; z < chunksZ; ++z) {
             for (int x = 0; x < chunksX; ++x) {
-                KM::Chunk *chunk = new KM::Chunk(&m_world, x * 16, 0, z * 16);
+                KM::Chunk *chunk = new KM::Chunk(m_world.get(), x * 16, 0, z * 16);
                 m_chunks.push_back(chunk); 
             }
         }
+        m_player.setWorld(m_world.get());
 
         std::cout << "GUI\n";
 
@@ -118,12 +135,6 @@ namespace KM {
 
         std::cout << "Loaded\n";
 
-        m_window.AddResizeHandler([this]() { this->OnResize(); });
-        m_window.AddKeyboardHandler([this](int key, int scancode, int action, int mods) { this->OnKey(key, scancode, action, mods); });
-        m_window.AddMouseButtonHandler([this](int button, int action, int mods) { this->OnMouseButton(button, action, mods); });
-        m_window.AddScrollHandler([this](double x, double y) { this->OnScroll(x, y); });
-        m_window.AddCursorPosHandler([this](double x, double y) { this->OnCursorPos(x, y); });
-
         double lastTime = glfwGetTime();
         int frameCounter = 0;
         int tickCounter = 0;
@@ -153,6 +164,8 @@ namespace KM {
 
             m_window.Update();
             frameCounter++;
+            chunkRendered = 0;
+            chunkTotal = 0;
 
             while (glfwGetTime() - lastTime > 1.0) {
                 lastTime += 1.0;
@@ -162,6 +175,9 @@ namespace KM {
                 tickCounter = 0;
             }
         }
+
+        glDeleteBuffers(1, &selectionBoxVbo);
+        glDeleteVertexArrays(1, &m_selectionBoxVao);
     }
 
     void Application::OnResize()
@@ -178,6 +194,10 @@ namespace KM {
 
     void Application::OnKey(int key, int scancode, int action, int mods)
     {
+        if (key == GLFW_KEY_B && action == GLFW_RELEASE) {
+            this->SetMenu(new InventoryMenu());
+        }
+
         if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
             if (this->m_mouseGrabbed) {
                 glfwSetInputMode(this->m_window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -212,35 +232,20 @@ namespace KM {
                 int dY = m_hitResult.value().y;
                 int dZ = m_hitResult.value().z;
 
-                if (m_hitResult.value().face == 0) {
-                    dY -= 1;
-                }
+                int* directionVector = directionNormalVectors[m_hitResult.value().face];
 
-                if (m_hitResult.value().face == 1) {
-                    dY += 1;
-                }
+                dX += directionVector[0];
+                dY += directionVector[1];
+                dZ += directionVector[2];
 
-                if (m_hitResult.value().face == 2) {
-                    dZ -= 1;
-                }
+                if (this->m_player.bb.intersects({ (float) dX, (float) dY, (float) dZ, dX + 1.0f, dY + 0.5f, dZ + 1.0f }))
+                    return;
 
-                if (m_hitResult.value().face == 3) {
-                    dZ += 1;
-                }
+                m_world->setBlockId(dX, dY, dZ, m_selectedItem + 1);
+                m_world->recalculateLightDepths(dX, dZ, 1, 1);
 
-                if (m_hitResult.value().face == 4) {
-                    dX -= 1;
-                }
-
-                if (m_hitResult.value().face == 5) {
-                    dX += 1;
-                }
-
-                m_world.setBlockId(dX, dY, dZ, m_selectedItem + 1);
-                m_world.recalculateLightDepths(dX, dZ, 1, 1);
-
-                int chunksX = m_world.getWidth() / 16;
-                int chunksZ = m_world.getHeight() / 16;
+                int chunksX = m_world->getWidth() / 16;
+                int chunksZ = m_world->getHeight() / 16;
 
                 int chunkX = dX / 16;
                 int chunkZ = dZ / 16;
@@ -282,11 +287,11 @@ namespace KM {
                     int chunkX = m_hitResult.value().x / 16;
                     int chunkZ = m_hitResult.value().z / 16;
 
-                    m_world.setBlockId(m_hitResult.value().x, m_hitResult.value().y, m_hitResult.value().z, 0);
-                    m_world.recalculateLightDepths(m_hitResult.value().x, m_hitResult.value().z, 1, 1);
+                    m_world->setBlockId(m_hitResult.value().x, m_hitResult.value().y, m_hitResult.value().z, 0);
+                    m_world->recalculateLightDepths(m_hitResult.value().x, m_hitResult.value().z, 1, 1);
 
-                    int chunksX = m_world.getWidth() / 16;
-                    int chunksZ = m_world.getHeight() / 16;
+                    int chunksX = m_world->getWidth() / 16;
+                    int chunksZ = m_world->getHeight() / 16;
                     m_chunks[(m_hitResult.value().z / 16) * chunksX + (m_hitResult.value().x / 16)]->dirty = true;
                 
                     if (localBX == 0 && chunkX > 0) {
@@ -382,48 +387,7 @@ namespace KM {
 
     void Application::Tick()
     {
-        this->m_player.xo = this->m_player.x;
-        this->m_player.yo = this->m_player.y;
-        this->m_player.zo = this->m_player.z;
-
-        float xa = 0;
-        float za = 0;
-        
-        if (glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && this->m_player.onGround) {
-            this->m_player.yd = 0.12f;
-        }
-
-        if (glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_LEFT_SHIFT) != GLFW_RELEASE || glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_RIGHT_SHIFT) != GLFW_RELEASE && !this->m_player.onGround) {
-            this->m_player.yd = -0.12f;
-        }
-
-        if (glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_W) != GLFW_RELEASE) {
-            za -= 1;
-        }
-
-        if (glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_S) != GLFW_RELEASE) {
-            za += 1;
-        }
-
-        if (glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_A) != GLFW_RELEASE) {
-            xa -= 1;
-        }
-
-        if (glfwGetKey(this->m_window.GetHandle(), GLFW_KEY_D) != GLFW_RELEASE) {
-            xa += 1;
-        }
-
-        this->m_player.mouseRelative(xa, za, this->m_player.onGround ? 0.02f : 0.005f);
-        this->m_player.yd = (float) ((double) this->m_player.yd - 0.005);
-        this->m_player.move(this->m_player.xd, this->m_player.yd, this->m_player.zd);
-        this->m_player.xd *= 0.91f;
-        this->m_player.yd *= 0.98f;
-        this->m_player.zd *= 0.91f;
-
-        if (this->m_player.onGround) {
-            this->m_player.xd *= 0.8F;
-            this->m_player.zd *= 0.8F;
-        }
+       this->m_player.tick();
 
         float mouseDeltaX = (float) this->m_mouseDelta[0];
         float mouseDeltaY = (float) this->m_mouseDelta[1];
@@ -445,7 +409,7 @@ namespace KM {
         
         float reach = 5.0f;
         glm::vec3 end = start + dir * reach;
-        m_hitResult = m_world.raycast(start, end);
+        m_hitResult = m_world->raycast(start, end);
     }
 
     void Application::RenderWorld()
@@ -471,11 +435,29 @@ namespace KM {
         m_terrainShader.SetUniformFloat4("uFogColor", 0.5f, 0.8f, 1.0f, 1.0f);
         m_terrainShader.SetUniformFloat4("uPlayer", (float) m_player.x, (float) m_player.z, 0.0f, 0.0f);
 
+       glm::quat a(0.0f, 0.0f, 0.0f, 1.0f);
+        {
+            float yaw = m_player.yaw + 180.0f;
+            float pitch = m_player.pitch;
+            a = glm::rotate(a, glm::pi<float>() - yaw * ((float)glm::pi<float>() / 180), glm::vec3(0.0f, 1.0f, 0.0f));
+            a = glm::rotate(a, -pitch * (glm::pi<float>() / 180), glm::vec3(1.0f, 0.0f, 0.0f));
+            a = glm::rotate(a, 0.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+            a = glm::quat(-a.x, -a.y, -a.z, a.w);
+        }
+        auto m = glm::mat4_cast(a);
+
+        Frustum frustum;
+        frustum.Init(m, projection);
+        frustum.SetPosition(m_player.x, m_player.y, m_player.z);
+
         m_terrainTexture.Bind(0);
         m_terrainShader.SetUniformInt("uSampler", 0);
         
         for (auto chunk : m_chunks) {
+            chunkTotal++;
+            if (!chunk->IsInFrustum(frustum)) continue;
             chunk->render(0);
+            chunkRendered++;
         }
 
         glEnable(GL_BLEND);
@@ -526,7 +508,7 @@ namespace KM {
 
         if (m_showDebugInfo) {
             m_textRenderer.DrawText("NoCraft (" + std::to_string(KM::Chunk::chunkUpdates) + " chunk updates)", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-            m_textRenderer.DrawText(m_fpsString, 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            m_textRenderer.DrawText(m_fpsString + " CR " + std::to_string(chunkRendered) + "/" + std::to_string(chunkTotal), 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             m_textRenderer.DrawText("X: " + std::to_string(m_player.x), 2, 32, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             m_textRenderer.DrawText("Y: " + std::to_string(m_player.y), 2, 42, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             m_textRenderer.DrawText("Z: " + std::to_string(m_player.z), 2, 52, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -607,6 +589,9 @@ namespace KM {
 
         vertices.push_back({ x1, y0, z0, 0, 0, 0, 0.4f });
         vertices.push_back({ x1, y0, z1, 0, 0, 0, 0.4f });
+
+        vertices.push_back({ x1, y1, z0, 0, 0, 0, 0.4f });
+        vertices.push_back({ x1, y1, z1, 0, 0, 0, 0.4f });
 
         vertices.push_back({ x0, y1, z0, 0, 0, 0, 0.4f });
         vertices.push_back({ x1, y1, z0, 0, 0, 0, 0.4f });

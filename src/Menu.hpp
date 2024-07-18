@@ -23,7 +23,7 @@ namespace KM {
         virtual void InitGui();
         virtual void ActionPerformed(Button &button);
         virtual void Resize(int width, int height);
-        void Render(int mouseX, int mouseY);
+        virtual void Render(int mouseX, int mouseY);
         void MouseClicked(int mouseX, int mouseY, int button);
     protected:
         int width;
@@ -37,5 +37,14 @@ namespace KM {
         void InitGui() override;
         void Resize(int width, int height) override;
         void ActionPerformed(Button &button) override;
+    };
+
+    class InventoryMenu : public Menu
+    {
+    public:
+        void InitGui() override;
+        void Resize(int width, int height) override;
+        void ActionPerformed(Button &button) override;
+        void Render(int mouseX, int mouseY) override;
     };
 }

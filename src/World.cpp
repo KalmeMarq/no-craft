@@ -43,6 +43,7 @@ namespace KM {
         this->m_blocks.reserve(this->m_width * this->m_height * this->m_depth);
         this->m_lightDepths.reserve(this->m_width * this->m_height);
 
+        std::cout << "Generating World\n";
         for (int x = 0; x < this->m_width; ++x) {
             for (int z = 0; z < this->m_height; ++z) {
                 for (int y = 0; y < this->m_depth; ++y) {
@@ -54,6 +55,7 @@ namespace KM {
 
         srand(time(NULL));
 
+        std::cout << "Placing Trees\n";
         for (int i = 0; i < 64; i++) {
             int x = (rand() % (this->m_width - 6)) + 3;
             int z = (rand() % (this->m_height - 6)) + 3;
@@ -497,6 +499,11 @@ namespace KM {
             glDrawElements(GL_TRIANGLES, this->indexCountLayer1, GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
         }
+    }
+
+    bool Chunk::IsInFrustum(Frustum &frustum)
+    {
+        return frustum.IsVisible({ (float) x0, (float) y0, (float) z0, (float) x1, (float) y1, (float) z1 });
     }
 
     int Chunk::chunkUpdates = 0;

@@ -24,39 +24,28 @@ void TextRenderer::Init()
     int width, height, nrChannels;
     unsigned char *data = stbi_load("res/textures/default.png", &width, &height, &nrChannels, 4);
 
-    int var9;
-    int var10;
-    int var11;
-    int var12;
-    int var13;
-    int var15;
-    int var16;
-    for(var9 = 0; var9 < 256; ++var9) {
-        var10 = var9 % 16;
-        var11 = var9 / 16;
+    for(int i = 0; i < 256; ++i) {
+        int col = i % 16;
+        int row = i / 16;
 
-        for(var12 = 7; var12 >= 0; --var12) {
-            var13 = var10 * 8 + var12;
-            bool var14 = true;
+        int chrWidth;
+        if (i == 32) {
+            charWidth[i] = 4;
+        } else {
+            for (chrWidth = 7; chrWidth >= 0; --chrWidth) {
+                int pcol = col * 8 + chrWidth;
 
-            for(var15 = 0; var15 < 8 && var14; ++var15) {
-                var16 = (var11 * 8 + var15) * width;
-                int var17 = data[(var13 + var16) * 4] & 255;
-                if(var17 > 0) {
-                    var14 = false;
+                for (int y = 0; y < 8; ++y) {
+                    int prow = (row * 8 + y) * width;
+                    int alpha = data[(pcol + prow) * 4] & 255;
+                    if (alpha > 0) {
+                        goto NahFrFrDeadass;
+                    }
                 }
             }
-
-            if(!var14) {
-                break;
-            }
+        NahFrFrDeadass:
+            charWidth[i] = chrWidth + 2;
         }
-
-        if(var9 == 32) {
-            var12 = 2;
-        }
-
-        charWidth[var9] = var12 + 2;
     }
 
     glTextureStorage2D(m_fontTexture, 1, GL_RGBA8, width, height);

@@ -82,6 +82,8 @@ namespace KM {
         void render();
 
         void render(int layer);
+
+        bool IsInFrustum(Frustum &frustum);
         
         static int chunkUpdates;
     };

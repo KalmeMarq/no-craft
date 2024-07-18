@@ -1,10 +1,12 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "Player.hpp"
+#include "Application.hpp"
+#include <glfw/glfw3.h>
 
 namespace KM {
     Player::Player() {
         this->yaw = 135;
-        this->setPosition(0, 64 / 3 + 2, 0);
+        this->setPosition(64, 64 / 3 + 2, 64);
     }
 
     void Player::setWorld(World *world) {
@@ -31,6 +33,50 @@ namespace KM {
     }
 
     void Player::tick() {
+        this->xo = this->x;
+        this->yo = this->y;
+        this->zo = this->z;
+
+        float xa = 0;
+        float za = 0;
+
+        Application *app = Application::GetInstance();
+        
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && this->onGround) {
+            this->yd = 0.12f;
+        }
+
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_LEFT_SHIFT) != GLFW_RELEASE || glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_RIGHT_SHIFT) != GLFW_RELEASE && !this->onGround) {
+            this->yd = -0.12f;
+        }
+
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_W) != GLFW_RELEASE) {
+            za -= 1;
+        }
+
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_S) != GLFW_RELEASE) {
+            za += 1;
+        }
+
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_A) != GLFW_RELEASE) {
+            xa -= 1;
+        }
+
+        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_D) != GLFW_RELEASE) {
+            xa += 1;
+        }
+
+        this->mouseRelative(xa, za, this->onGround ? 0.02f : 0.005f);
+        this->yd = (float) ((double) this->yd - 0.005);
+        this->move(this->xd, this->yd, this->zd);
+        this->xd *= 0.91f;
+        this->yd *= 0.98f;
+        this->zd *= 0.91f;
+
+        if (this->onGround) {
+            this->xd *= 0.8F;
+            this->zd *= 0.8F;
+        }
     }
 
     // Credits: MCClassic

@@ -99,4 +99,28 @@ namespace KM {
             Application::GetInstance()->Shutdown();
         }
     }
+    
+    void InventoryMenu::InitGui()
+    {
+    }
+    
+    void InventoryMenu::Resize(int width, int height)
+    {
+        Menu::Resize(width, height);
+    }
+    
+    void InventoryMenu::ActionPerformed(Button &button)
+    {
+    }
+    
+    void InventoryMenu::Render(int mouseX, int mouseY)
+    {
+        Menu::Render(mouseX, mouseY);
+
+        Application *app = Application::GetInstance();
+
+        app->m_guiTexture.Bind(0);
+        app->m_texturedShader.SetUniformInt("uSampler", 0);
+        app->DrawTexture(20, 20, this->width - 40, this->height - 40, 182, 0, 4, 4, 256, 256);
+    }
 }
