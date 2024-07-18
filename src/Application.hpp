@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "Renderer.hpp"
 #include "Math.hpp"
 #include "World.hpp"
 #include "Player.hpp"
@@ -24,23 +25,19 @@ namespace KM {
         void OnCursorPos(double x, double y) override;
         void OnScroll(double x, double y) override;
 
-        static void RenderTile(std::vector<KM::Vertex> &vertices, KM::World *world, BlockPos blockPos, int tile, int layer);
-        void DrawTexture(int x, int y, int w, int h, int u, int v, int us, int vs, int tw, int th);
+        static void RenderTile(std::vector<KM::Vertex> &vertices, KM::World* world, BlockPos blockPos, int tile, int layer);
+        void RenderTileGui(std::vector<KM::Vertex> &vertices, int tile);
         
-        void SetMenu(Menu *menu);
+        void SetMenu(Menu* menu);
         void Shutdown();
 
         void StartWorld();
         void QuitWorld();
     public:
-        Texture m_guiTexture;
-        Texture m_bgTexture;
-        Shader m_texturedShader;
-
-        static Application *GetInstance();
-        static Application *appInstance;
-        TextRenderer m_textRenderer;
-        GameWindow m_window;
+        static Application* GetInstance();
+        static Application* appInstance;
+        GameWindow window;
+        Renderer renderer;
     private:
         void Render();
         void Tick();
@@ -60,17 +57,12 @@ namespace KM {
         double m_mouseDelta[2] = {0};
         std::optional<HitResult> m_hitResult = std::nullopt;
         World* m_world { nullptr };
-        Shader m_defaultShader;
-        Shader m_terrainShader;
-        Texture m_terrainTexture;
         std::vector<Chunk*> m_chunks;
         std::string m_fpsString = "";
 
-        GLuint m_guiVao;
-        GLuint m_guiVbo;
         GLuint m_selectionBoxVao;
         int m_selectionVertexCount { 0 };
 
-        Menu *m_menu;
+        Menu* m_menu;
     };
 }

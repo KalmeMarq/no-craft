@@ -36,7 +36,7 @@ namespace KM {
 
     std::optional<glm::vec3> vec3ClipZ(glm::vec3 vec, glm::vec3 other, float r);
 
-    struct Vertex {
+    struct Vertex3FColor4FTex2F {
         float x;
         float y;
         float z;
@@ -47,6 +47,8 @@ namespace KM {
         float u;
         float v;
     };
+
+    typedef Vertex3FColor4FTex2F Vertex;
     
     struct Vertex3FColor4F {
         float x;

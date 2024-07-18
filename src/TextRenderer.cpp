@@ -5,40 +5,38 @@
 static int charWidth[256] = { 8 };
 constexpr float SHADOW_FACTOR = 0.3f;
 
-TextRenderer::TextRenderer(Shader *shader)
+TextRenderer::TextRenderer(Shader* shader)
 {
-    m_shader = shader;
+    this->m_shader = shader;
 }
 
 void TextRenderer::Init()
 {
-    glCreateTextures(GL_TEXTURE_2D, 1, &m_fontTexture);
-
-    glTextureParameteri(m_fontTexture, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTextureParameteri(m_fontTexture, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glTextureParameteri(m_fontTexture, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTextureParameteri(m_fontTexture, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
     std::cout << "Loading Default Font\n";
     int width, height, nrChannels;
-    unsigned char *data = stbi_load(RESOURCES_PATH "textures/default.png", &width, &height, &nrChannels, 4);
+    stbi_uc* data = stbi_load(RESOURCES_PATH "textures/default.png", &width, &height, &nrChannels, 4);
 
-    for(int i = 0; i < 256; ++i) {
+    for (int i = 0; i < 256; ++i)
+    {
         int col = i % 16;
         int row = i / 16;
 
         int chrWidth;
-        if (i == 32) {
+        if (i == 32)
+        {
             charWidth[i] = 4;
-        } else {
-            for (chrWidth = 7; chrWidth >= 0; --chrWidth) {
+        } else
+        {
+            for (chrWidth = 7; chrWidth >= 0; --chrWidth)
+            {
                 int pcol = col * 8 + chrWidth;
 
-                for (int y = 0; y < 8; ++y) {
+                for (int y = 0; y < 8; ++y)
+                {
                     int prow = (row * 8 + y) * width;
-                    int alpha = data[(pcol + prow) * 4] & 255;
-                    if (alpha > 0) {
+                    int alpha = data[(pcol + prow) * 4] & 0xFF;
+                    if (alpha > 0)
+                    {
                         goto NahFrFrDeadass;
                     }
                 }
@@ -48,15 +46,13 @@ void TextRenderer::Init()
         }
     }
 
-    glTextureStorage2D(m_fontTexture, 1, GL_RGBA8, width, height);
-    glTextureSubImage2D(m_fontTexture, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    stbi_image_free(data);
+    this->m_fontTexture.LoadFromStbData(data, width, height);
 
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    glGenVertexArrays(1, &this->m_vao);
+    glBindVertexArray(this->m_vao);
 
-    glGenBuffers(1, &m_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glGenBuffers(1, &this->m_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, this->m_vbo);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, (3 + 4 + 2) * sizeof(float), 0);
@@ -71,26 +67,25 @@ void TextRenderer::Init()
 
 TextRenderer::~TextRenderer()
 {
-    glDeleteBuffers(1, &m_vbo);
-    glDeleteVertexArrays(1, &m_vao);
-    glDeleteTextures(1, &m_fontTexture);
+    glDeleteBuffers(1, &this->m_vbo);
+    glDeleteVertexArrays(1, &this->m_vao);
 }
 
 void TextRenderer::DrawAlignedText(const std::string &text, int x, int y, glm::vec4 color, float align, bool shadow)
 {
-    DrawText(text, x - (int) ((float) this->GetWidth(text) * align), y, color, shadow);
+    this->DrawText(text, x - (int) ((float) this->GetWidth(text) * align), y, color, shadow);
 }
 
 void TextRenderer::DrawText(const std::string &text, int x, int y, glm::vec4 color, bool shadow)
 {
-    glBindTextureUnit(0, m_fontTexture);
-    m_shader->SetUniformInt("uSampler", 0);
+    this->m_fontTexture.Bind(0);
+    this->m_shader->SetUniformInt("uSampler", 0);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindVertexArray(m_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, this->m_vbo);
 
     std::string::const_iterator c;
 

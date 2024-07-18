@@ -20,18 +20,18 @@ namespace KM {
     public:
         ~GameWindow();
 
-        bool Init(int width, int height, const char *title, WindowEventHandler* eventHandler);
+        bool Init(int width, int height, const char* title, WindowEventHandler* eventHandler);
 
         bool ShouldClose();
         void Update();
 
-        GLFWwindow *GetHandle() const;
+        GLFWwindow* GetHandle() const;
         int GetWidth() const;
         int GetHeight() const;
     
         void SetVsync(bool flag);
     private:
-        GLFWwindow *m_handle = nullptr;
+        GLFWwindow* m_handle = nullptr;
         int m_width;
         int m_height;
 

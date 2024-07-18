@@ -6,7 +6,7 @@
 namespace KM {
     struct Player {
     public:
-        KM::World *world;
+        KM::World* world;
         float w = 0.3f;
         float h = 0.9f;
         float xo = 0.f;
@@ -25,7 +25,7 @@ namespace KM {
         KM::Box bb;
 
         Player();
-        void setWorld(World *world);
+        void setWorld(World* world);
         void setPosition(float x, float y, float z);
         void turn(float xo, float yo);
         void tick();

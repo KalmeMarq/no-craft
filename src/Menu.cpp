@@ -26,23 +26,18 @@ namespace KM {
 
     void Menu::Render(int mouseX, int mouseY)
     {
-        Application *app = Application::GetInstance();
+        Application* app = Application::GetInstance();
 
-        app->m_guiTexture.Bind(0);
-        app->m_texturedShader.SetUniformInt("uSampler", 0);
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        app->DrawTexture(0, 0, this->width, this->height, 182, 0, 4, 4, 256, 256);
+        app->renderer.DefaultBlendFunc();
+        app->renderer.DrawTexture(app->renderer.m_guiTexture, 0, 0, this->width, this->height, 182, 0, 4, 4, 256, 256);
         glDisable(GL_BLEND);
 
         for (auto &button : this->m_buttons) {
             bool hovered = mouseX > button.x && mouseX <= button.x + button.width && mouseY > button.y && mouseY <= button.y + button.height;
 
-            app->m_guiTexture.Bind(0);
-            app->m_texturedShader.SetUniformInt("uSampler", 0);
-
-            app->DrawTexture(button.x, button.y, button.width, button.height, 0, hovered ? 86 : 66, 200, 20, 256, 256);
-            app->m_textRenderer.DrawAlignedText(button.message, button.x + button.width / 2, button.y + 6, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 0.5f);
+            app->renderer.DrawTexture(app->renderer.m_guiTexture, button.x, button.y, button.width, button.height, 0, hovered ? 86 : 66, 200, 20, 256, 256);
+            app->renderer.DrawAlignedText(button.message, button.x + button.width / 2, button.y + 6, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 0.5f);
         }
     }
 
@@ -52,8 +47,8 @@ namespace KM {
 
         for (auto &button : this->m_buttons) {
             bool hovered = mouseX > button.x && mouseX <= button.x + button.width && mouseY > button.y && mouseY <= button.y + button.height;
-            std::cout << mouseX << "," << mouseY << ";" << button.id << "," << button.x << "," << button.y << "," << button.width << "," << button.height << "\n";
-            if (hovered) {
+            if (hovered)
+            {
                 ActionPerformed(button);
             }
         }
@@ -103,8 +98,8 @@ namespace KM {
     void GameMenu::Render(int mouseX, int mouseY)
     {
         Menu::Render(mouseX, mouseY);
-        Application *app = Application::GetInstance();
-        app->m_textRenderer.DrawAlignedText("Game Menu", this->width / 2, 30, glm::vec4(1.0f), 0.5f);
+        Application* app = Application::GetInstance();
+        app->renderer.m_textRenderer.DrawAlignedText("Game Menu", this->width / 2, 30, glm::vec4(1.0f), 0.5f);
     }
 
     void InventoryMenu::InitGui()
@@ -124,11 +119,8 @@ namespace KM {
     {
         Menu::Render(mouseX, mouseY);
 
-        Application *app = Application::GetInstance();
-
-        app->m_guiTexture.Bind(0);
-        app->m_texturedShader.SetUniformInt("uSampler", 0);
-        app->DrawTexture(20, 20, this->width - 40, this->height - 40, 182, 0, 4, 4, 256, 256);
+        Application* app = Application::GetInstance();
+        app->renderer.DrawTexture(app->renderer.m_guiTexture, 20, 20, this->width - 40, this->height - 40, 182, 0, 4, 4, 256, 256);
     }
     
     void TitleMenu::InitGui()
@@ -165,12 +157,10 @@ namespace KM {
     
     void TitleMenu::Render(int mouseX, int mouseY)
     {
-        Application *app = Application::GetInstance();
-        app->m_bgTexture.Bind(0);
-        app->m_texturedShader.SetUniformInt("uSampler", 0);
-        app->DrawTexture(0, 0, this->width, this->height, 0, 0, this->width, this->height, 32, 32);
-        Menu::Render(mouseX, mouseY);
+        Application* app = Application::GetInstance();
 
-        app->m_textRenderer.DrawAlignedText("NoCraft 0.0.1", this->width / 2, 30, glm::vec4(0.6f, 0.6f, 0.6f, 1.0f), 0.5f);
+        app->renderer.DrawTexture(app->renderer.m_bgTexture, 0, 0, this->width, this->height, 0, 0, this->width, this->height, 32, 32);
+        Menu::Render(mouseX, mouseY);
+        app->renderer.DrawAlignedText("NoCraft 0.0.1", this->width / 2, 30, glm::vec4(0.6f, 0.6f, 0.6f, 1.0f), 0.5f);
     }
 }

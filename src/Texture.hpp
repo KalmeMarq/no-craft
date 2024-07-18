@@ -2,33 +2,38 @@
 
 #include <string>
 #include <iostream>
+#include "stb_image.h"
 
-enum class TextureFilter {
-    NEAREST,
-    LINEAR
-};
-
-enum class TextureWrapping {
-    CLAMP_TO_EDGE,
-    REPEAT
-};
-
-class Texture
+namespace KM
 {
-public:
-    ~Texture();
+    enum class TextureFilter {
+        NEAREST,
+        LINEAR
+    };
 
-    void LoadFromFile(const char *name);
+    enum class TextureWrapping {
+        CLAMP_TO_EDGE,
+        REPEAT
+    };
 
-    int GetWidth();
-    int GetHeight();
+    class Texture
+    {
+    public:
+        ~Texture();
 
-    void SetFilter(TextureFilter filter);
-    void SetWrap(TextureWrapping wrap);
+        void LoadFromFile(const char* name);
+        void LoadFromStbData(stbi_uc* data, int width, int height);
 
-    void Bind(int unit);
-private:
-    unsigned int m_id;
-    int m_width;
-    int m_height;
-};
+        int GetWidth();
+        int GetHeight();
+
+        void SetFilter(TextureFilter filter);
+        void SetWrap(TextureWrapping wrap);
+
+        void Bind(int unit);
+    private:
+        GLuint m_id { 4294967295 };
+        int m_width;
+        int m_height;
+    };
+}

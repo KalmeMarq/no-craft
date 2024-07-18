@@ -35,7 +35,7 @@ namespace KM {
         std::optional<HitResult> raycast(glm::vec3 var1, glm::vec3 var2);
         std::optional<HitResult> tileRaycast(int x, int y, int z, glm::vec3 var4, glm::vec3 var5);
 
-        void write(std::ofstream *out);
+        void write(std::ofstream* out);
     private:
         int m_width;
         int m_height;
@@ -46,7 +46,7 @@ namespace KM {
 
     struct Chunk {
     public:
-        KM::World *world;
+        KM::World* world;
         int x0 = 0;
         int y0 = 0;
         int z0 = 0;
@@ -63,7 +63,7 @@ namespace KM {
 
         bool dirty = true;
 
-        Chunk(KM::World *world, int x0, int y0, int z0);
+        Chunk(KM::World* world, int x0, int y0, int z0);
 
         Chunk(const Chunk&)  = delete;
         Chunk& operator=(const Chunk&)  = delete;

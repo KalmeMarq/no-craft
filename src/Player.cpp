@@ -9,7 +9,7 @@ namespace KM {
         this->setPosition(64, 64 / 3 + 2, 64);
     }
 
-    void Player::setWorld(World *world) {
+    void Player::setWorld(World* world) {
         this->world = world;
     }
 
@@ -40,29 +40,29 @@ namespace KM {
         float xa = 0;
         float za = 0;
 
-        Application *app = Application::GetInstance();
+        Application* app = Application::GetInstance();
         
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && (this->onGround || this->isInsideWater)) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && (this->onGround || this->isInsideWater)) {
             this->yd = 0.12f;
         }
 
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_LEFT_SHIFT) != GLFW_RELEASE || glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_RIGHT_SHIFT) != GLFW_RELEASE && !this->onGround) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_LEFT_SHIFT) != GLFW_RELEASE || glfwGetKey(app->window.GetHandle(), GLFW_KEY_RIGHT_SHIFT) != GLFW_RELEASE && !this->onGround) {
             this->yd = -0.12f;
         }
 
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_W) != GLFW_RELEASE) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_W) != GLFW_RELEASE) {
             za -= 1;
         }
 
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_S) != GLFW_RELEASE) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_S) != GLFW_RELEASE) {
             za += 1;
         }
 
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_A) != GLFW_RELEASE) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_A) != GLFW_RELEASE) {
             xa -= 1;
         }
 
-        if (glfwGetKey(app->m_window.GetHandle(), GLFW_KEY_D) != GLFW_RELEASE) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_D) != GLFW_RELEASE) {
             xa += 1;
         }
 

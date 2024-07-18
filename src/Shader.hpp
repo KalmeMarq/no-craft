@@ -13,7 +13,7 @@ class Shader
 public:
     ~Shader();
 
-    void Init(const char *name);
+    void Init(const char* name);
 
     void Use();
     void SetUniformBool(const std::string &name, bool value);

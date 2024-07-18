@@ -9,7 +9,7 @@ namespace KM {
             glfwTerminate();
     }
 
-    bool GameWindow::Init(int width, int height, const char *title, WindowEventHandler* eventHandler)
+    bool GameWindow::Init(int width, int height, const char* title, WindowEventHandler* eventHandler)
     {
         glfwSetErrorCallback([](int, const char* desc) { std::cerr << desc << "\n"; std::exit(EXIT_FAILURE); });
     
@@ -70,7 +70,7 @@ namespace KM {
         glfwPollEvents();
     }
 
-    GLFWwindow *GameWindow::GetHandle() const
+    GLFWwindow* GameWindow::GetHandle() const
     {
         return this->m_handle;
     }
@@ -90,7 +90,7 @@ namespace KM {
         glfwSwapInterval(flag);
     }
 
-    void GameWindow::framebufferSizeCallback(GLFWwindow *win, int x, int y)
+    void GameWindow::framebufferSizeCallback(GLFWwindow* win, int x, int y)
     {
         auto window = static_cast<GameWindow*>(glfwGetWindowUserPointer(win));
         window->m_width = x;

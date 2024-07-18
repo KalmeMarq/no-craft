@@ -1,6 +1,6 @@
 #include "Shader.hpp"
 
-void Shader::Init(const char *name)
+void Shader::Init(const char* name)
 {
     std::string vertexSrc;
     std::string fragmentSrc;
@@ -22,8 +22,8 @@ void Shader::Init(const char *name)
     vertexSrc = vShaderStream.str();
     fragmentSrc = fShaderStream.str();
 
-    const char *vertexSource = vertexSrc.c_str();
-    const char *fragmentSource = fragmentSrc.c_str();
+    const char* vertexSource = vertexSrc.c_str();
+    const char* fragmentSource = fragmentSrc.c_str();
 
     GLuint prog = glCreateProgram();
 

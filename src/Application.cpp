@@ -37,9 +37,9 @@ static int chunkRendered = 0;
 static int chunkTotal = 0;
 
 namespace KM {
-    Application *Application::appInstance { nullptr };
+    Application* Application::appInstance { nullptr };
 
-    Application::Application() : m_textRenderer(&m_texturedShader), m_menu(nullptr)
+    Application::Application() : m_menu(nullptr)
     {
         appInstance = this;
     }
@@ -49,7 +49,7 @@ namespace KM {
         this->SetMenu(nullptr);
 
         std::cout << "Clearing Chunks\n";
-        for (KM::Chunk *chunk : m_chunks) {
+        for (KM::Chunk* chunk : m_chunks) {
             delete chunk;
         }
         m_chunks.clear();
@@ -59,44 +59,16 @@ namespace KM {
     void Application::Run()
     {
         std::cout << "Creating Window\n";
-        if (!m_window.Init(854, 480, "NoCraft", this)) {
+        if (!window.Init(854, 480, "NoCraft", this)) {
             std::cout << "Failed to create Window\n";
             return;
         }
-        m_window.SetVsync(false);
+        window.SetVsync(false);
 
-        std::cout << "Initializing Shaders\n";
-        m_defaultShader.Init("default");
-        m_texturedShader.Init("textured");
-        m_terrainShader.Init("terrain");
-    
-        std::cout << "Loading Textures\n";
-        m_terrainTexture.LoadFromFile("terrain.png");
-        m_guiTexture.LoadFromFile("gui.png");
-        m_bgTexture.LoadFromFile("bg.png");
-
-        std::cout << "Initializing TextRenderer\n";
-        m_textRenderer.Init();
+        renderer.Init();
 
         std::cout << "Creating Chunks\n";
         // this->StartWorld();
-
-        std::cout << "GUI\n";
-
-        glGenVertexArrays(1, &m_guiVao);
-        glBindVertexArray(m_guiVao);
-        glGenBuffers(1, &m_guiVbo);
-        glBindBuffer(GL_ARRAY_BUFFER, m_guiVbo);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), 0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)(3 * sizeof(float)));
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (GLvoid *)((3 + 4) * sizeof(float)));
-
-        glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         std::cout << "Build Selection Box Geometry\n";
 
@@ -138,7 +110,7 @@ namespace KM {
 
         while (this->m_running)
         {
-            if (m_window.ShouldClose()) Shutdown();
+            if (window.ShouldClose()) Shutdown();
 
             // https://gamedev.stackexchange.com/questions/73700/make-opengl-program-only-update-every-1-60-seconds   
             tickTimeBehind += glfwGetTime() - tickLastTime;
@@ -153,7 +125,7 @@ namespace KM {
 
             this->Render();
 
-            m_window.Update();
+            window.Update();
             frameCounter++;
             chunkRendered = 0;
             chunkTotal = 0;
@@ -169,17 +141,19 @@ namespace KM {
 
         glDeleteBuffers(1, &selectionBoxVbo);
         glDeleteVertexArrays(1, &m_selectionBoxVao);
+
+        renderer.Close();
     }
 
     void Application::OnResize()
     {
         std::cout << "Viewport Resized";
-        glViewport(0, 0, this->m_window.GetWidth(), this->m_window.GetHeight());
+        glViewport(0, 0, this->window.GetWidth(), this->window.GetHeight());
 
         if (this->m_menu != nullptr)
         {
-            int scale = CalculateGuiScale(this->m_window.GetWidth(), this->m_window.GetHeight());
-            this->m_menu->Resize(this->m_window.GetWidth() / scale, this->m_window.GetHeight() / scale);
+            int scale = CalculateGuiScale(this->window.GetWidth(), this->window.GetHeight());
+            this->m_menu->Resize(this->window.GetWidth() / scale, this->window.GetHeight() / scale);
         }
     }
 
@@ -191,8 +165,8 @@ namespace KM {
 
         if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
             if (this->m_mouseGrabbed) {
-                glfwSetInputMode(this->m_window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                glfwSetCursorPos(this->m_window.GetHandle(), this->m_window.GetWidth() / 2, this->m_window.GetHeight() / 2);
+                glfwSetInputMode(this->window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                glfwSetCursorPos(this->window.GetHandle(), this->window.GetWidth() / 2, this->window.GetHeight() / 2);
                 this->m_mouseGrabbed = false;
                 this->SetMenu(new GameMenu());
             }
@@ -213,7 +187,7 @@ namespace KM {
     {
         if (this->m_menu != nullptr && action == GLFW_PRESS)
         {
-            int scale = CalculateGuiScale(this->m_window.GetWidth(), this->m_window.GetHeight());
+            int scale = CalculateGuiScale(this->window.GetWidth(), this->window.GetHeight());
             this->m_menu->MouseClicked(this->m_mousePos[0] / scale, this->m_mousePos[1] / scale, button);
         }
 
@@ -267,7 +241,7 @@ namespace KM {
 
         if (button == 0 && action == GLFW_RELEASE) {
             if (!m_mouseGrabbed) {
-                // glfwSetInputMode(m_window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                // glfwSetInputMode(window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 // m_mouseGrabbed = true;
             } else {
                 if (m_hitResult.has_value()) {
@@ -332,12 +306,12 @@ namespace KM {
         }
     }
 
-    Application *Application::GetInstance()
+    Application* Application::GetInstance()
     {
         return appInstance;
     }
 
-    void Application::SetMenu(Menu *menu)
+    void Application::SetMenu(Menu* menu)
     {
         if (this->m_menu != nullptr) {
             delete this->m_menu;
@@ -346,11 +320,11 @@ namespace KM {
         this->m_menu = menu;
 
         if (this->m_menu != nullptr) {
-            int scale = CalculateGuiScale(this->m_window.GetWidth(), this->m_window.GetHeight());
-            this->m_menu->Init(this->m_window.GetWidth() / scale, this->m_window.GetHeight() / scale);
+            int scale = CalculateGuiScale(this->window.GetWidth(), this->window.GetHeight());
+            this->m_menu->Init(this->window.GetWidth() / scale, this->window.GetHeight() / scale);
         } else {
-            glfwSetCursorPos(this->m_window.GetHandle(), this->m_window.GetWidth() / 2, this->m_window.GetHeight() / 2);
-            glfwSetInputMode(this->m_window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            glfwSetCursorPos(this->window.GetHandle(), this->window.GetWidth() / 2, this->window.GetHeight() / 2);
+            glfwSetInputMode(this->window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             this->m_mouseGrabbed = true;
         }
     }
@@ -369,7 +343,7 @@ namespace KM {
         
         for (int z = 0; z < chunksZ; ++z) {
             for (int x = 0; x < chunksX; ++x) {
-                KM::Chunk *chunk = new KM::Chunk(m_world, x * 16, 0, z * 16);
+                KM::Chunk* chunk = new KM::Chunk(m_world, x * 16, 0, z * 16);
                 m_chunks.push_back(chunk); 
             }
         }
@@ -381,7 +355,7 @@ namespace KM {
     void Application::QuitWorld()
     {
         std::cout << "Clearing Chunks\n";
-        for (KM::Chunk *chunk : m_chunks) {
+        for (KM::Chunk* chunk : m_chunks) {
             delete chunk;
         }
         m_chunks.clear();
@@ -452,8 +426,8 @@ namespace KM {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
 
-        int w = m_window.GetWidth();
-        int h = m_window.GetHeight();
+        int w = window.GetWidth();
+        int h = window.GetHeight();
 
         glEnable(GL_CULL_FACE);
 
@@ -464,13 +438,13 @@ namespace KM {
         modelView = glm::rotate(modelView, glm::radians(m_player->yaw), glm::vec3(0.0f, 1.0f, 0.0f));
         modelView = glm::translate(modelView, glm::vec3(-m_player->x, -m_player->y, -m_player->z));
 
-        m_terrainShader.Use();
-        m_terrainShader.SetUniformMat4("uProjection", projection);
-        m_terrainShader.SetUniformMat4("uModelView", modelView);
-        m_terrainShader.SetUniformFloat("uFogStart", 50 + (isInsideWater ? -45 : 0));
-        m_terrainShader.SetUniformFloat("uFogEnd", 82 + (isInsideWater ? -45 : 0));
-        m_terrainShader.SetUniformFloat4("uFogColor", fogR, fogG, fogB, 1.0f);
-        m_terrainShader.SetUniformFloat4("uPlayer", (float) m_player->x, (float) m_player->z, 0.0f, 0.0f);
+        renderer.terrainShader.Use();
+        renderer.terrainShader.SetUniformMat4("uProjection", projection);
+        renderer.terrainShader.SetUniformMat4("uModelView", modelView);
+        renderer.terrainShader.SetUniformFloat("uFogStart", 50 + (isInsideWater ? -45 : 0));
+        renderer.terrainShader.SetUniformFloat("uFogEnd", 82 + (isInsideWater ? -45 : 0));
+        renderer.terrainShader.SetUniformFloat4("uFogColor", fogR, fogG, fogB, 1.0f);
+        renderer.terrainShader.SetUniformFloat4("uPlayer", (float) m_player->x, (float) m_player->z, 0.0f, 0.0f);
 
        glm::quat a(0.0f, 0.0f, 0.0f, 1.0f);
         {
@@ -485,8 +459,8 @@ namespace KM {
 
         Frustum frustum(projection * modelView);
 
-        m_terrainTexture.Bind(0);
-        m_terrainShader.SetUniformInt("uSampler", 0);
+        renderer.terrainTexture.Bind(0);
+        renderer.terrainShader.SetUniformInt("uSampler", 0);
         
         for (auto chunk : m_chunks) {
             chunkTotal++;
@@ -507,10 +481,10 @@ namespace KM {
         }
         
         if (m_hitResult.has_value()) {
-            m_defaultShader.Use();
-            m_defaultShader.SetUniformMat4("uProjection", projection);
+            renderer.defaultShader.Use();
+            renderer.defaultShader.SetUniformMat4("uProjection", projection);
             modelView = glm::translate(modelView, glm::vec3(m_hitResult.value().x, m_hitResult.value().y, m_hitResult.value().z));
-            m_defaultShader.SetUniformMat4("uModelView", modelView);
+            renderer.defaultShader.SetUniformMat4("uModelView", modelView);
 
             glBindVertexArray(m_selectionBoxVao);
             glDrawArrays(GL_LINES, 0, m_selectionVertexCount);
@@ -523,8 +497,8 @@ namespace KM {
 
     void Application::RenderGui()
     {
-        int w = m_window.GetWidth();
-        int h = m_window.GetHeight();
+        int w = window.GetWidth();
+        int h = window.GetHeight();
 
         int scale = CalculateGuiScale(w, h);
         int scaledWidth = w / scale;
@@ -534,67 +508,95 @@ namespace KM {
         glm::mat4 modelView = glm::mat4(1.0f);  
         modelView = glm::translate(modelView, glm::vec3(0.0f, 0.0f, -2000.0f));
 
-        m_texturedShader.Use();
-        m_texturedShader.SetUniformMat4("uProjection", projection);
-        m_texturedShader.SetUniformMat4("uModelView", modelView);
+        renderer.texturedShader.Use();
+        renderer.texturedShader.SetUniformMat4("uProjection", projection);
+        renderer.texturedShader.SetUniformMat4("uModelView", modelView);
 
         if (this->m_world != nullptr && this->m_player != nullptr)
         {
             std::string version = (const char*) glGetString(GL_VERSION);
             version = version.substr(0, version.find_first_of(' '));
-            std::string renderer = (const char*) glGetString(GL_RENDERER);
+            std::string rrenderer = (const char*) glGetString(GL_RENDERER);
             std::string vendor = (const char*) glGetString(GL_VENDOR);
 
-            m_textRenderer.DrawText("+", scaledWidth / 2 - 4, scaledHeight / 2 - 4, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), false);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+            this->renderer.DrawTexture(this->renderer.m_guiTexture, scaledWidth / 2 - 8, scaledHeight / 2 - 8, 16, 16, 256 - 16, 0, 16, 16, 256, 256);
+            glDisable(GL_BLEND);
 
             if (m_showDebugInfo) {
-                m_textRenderer.DrawText("NoCraft (" + std::to_string(KM::Chunk::chunkUpdates) + " chunk updates)", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText(m_fpsString + " CR " + std::to_string(chunkRendered) + "/" + std::to_string(chunkTotal), 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText("X: " + std::to_string(m_player->x), 2, 32, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText("Y: " + std::to_string(m_player->y), 2, 42, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText("Z: " + std::to_string(m_player->z), 2, 52, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText("Pitch: " + std::to_string(m_player->pitch), 2, 62, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                m_textRenderer.DrawText("Yaw: " + std::to_string(m_player->yaw), 2, 72, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("NoCraft (" + std::to_string(KM::Chunk::chunkUpdates) + " chunk updates)", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow(m_fpsString + " CR " + std::to_string(chunkRendered) + "/" + std::to_string(chunkTotal), 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("X: " + std::to_string(m_player->x), 2, 32, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("Y: " + std::to_string(m_player->y), 2, 42, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("Z: " + std::to_string(m_player->z), 2, 52, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("Pitch: " + std::to_string(m_player->pitch), 2, 62, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("Yaw: " + std::to_string(m_player->yaw), 2, 72, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
                 if (m_hitResult.has_value()) {
-                    m_textRenderer.DrawText("H XYZ: " + std::to_string(m_hitResult.value().x) + " " + std::to_string(m_hitResult.value().y) + " " + std::to_string(m_hitResult.value().z), 2, 92, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-                    m_textRenderer.DrawText("H Face: " + std::to_string(m_hitResult.value().face), 2, 102, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    renderer.DrawTextWithShadow("H XYZ: " + std::to_string(m_hitResult.value().x) + " " + std::to_string(m_hitResult.value().y) + " " + std::to_string(m_hitResult.value().z), 2, 92, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                    renderer.DrawTextWithShadow("H Face: " + std::to_string(m_hitResult.value().face), 2, 102, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
                 }
 
                 std::string line = "Display: " + std::to_string(w) + "x" + std::to_string(h) + " (" + vendor + ")";
-                m_textRenderer.DrawAlignedText(line, scaledWidth - 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
-                m_textRenderer.DrawAlignedText(renderer, scaledWidth - 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
-                m_textRenderer.DrawAlignedText(version, scaledWidth - 2, 22, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+                renderer.DrawAlignedTextWithShadow(line, scaledWidth - 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+                renderer.DrawAlignedTextWithShadow(rrenderer, scaledWidth - 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+                renderer.DrawAlignedTextWithShadow(version, scaledWidth - 2, 22, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
             } else {
-                m_textRenderer.DrawText("NoCraft", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawTextWithShadow("NoCraft", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
             }
 
-            m_guiTexture.Bind(0);
-            m_texturedShader.SetUniformInt("uSampler", 0);
-            DrawTexture(scaledWidth / 2 - 91, scaledHeight - 22, 182, 22, 0, 0, 182, 22, 256, 256);
-            DrawTexture(scaledWidth / 2 - 91 + m_selectedItem * 20 + 1 - 2, scaledHeight - 22 - 1, 24, 24, 0, 22, 24, 24, 256, 256);
+            glEnable(GL_BLEND);
+            renderer.DefaultBlendFunc();
+            this->renderer.DrawTexture(this->renderer.m_guiTexture, scaledWidth / 2 - 91, scaledHeight - 22, 182, 22, 0, 0, 182, 22, 256, 256);
+            this->renderer.DrawTexture(this->renderer.m_guiTexture, scaledWidth / 2 - 91 + m_selectedItem * 20 + 1 - 2, scaledHeight - 22 - 1, 24, 24, 0, 22, 24, 24, 256, 256);
+            glDisable(GL_BLEND);
 
-            m_terrainTexture.Bind(0);
-            m_texturedShader.SetUniformInt("uSampler", 0);
+            for (int i = 0; i < BLOCK_COUNT; ++i) {
+                BlockDef* block = &BLOCKS_DEFS[i + 1];
+                {
+                    glEnable(GL_DEPTH_TEST);
+                    glm::mat4 mv = modelView;
+                    mv = glm::translate(mv, glm::vec3(scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3 - 29, scaledHeight - 22 + 2 + 8.5f, 10));
+                    mv = glm::scale(mv, glm::vec3(10, 10, 10));
+                    mv = glm::translate(mv, glm::vec3(1.0f, 0.5f, 1.0f));
+                    mv = glm::scale(mv, glm::vec3(1.0f, 1.0f, -1.0f));
+                    mv = glm::rotate(mv, glm::radians(210.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+                    mv = glm::rotate(mv, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+                    renderer.texturedShader.SetUniformMat4("uModelView", mv);
 
-            for (int i = 0; i < BLOCK_COUNT - 1; ++i) {
-                BlockDef *block = &BLOCKS_DEFS[i + 1];
-                DrawTexture(scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3, scaledHeight - 22 + 3, 16, 16, (block->guiTextureIndex % 16) * 16, (block->guiTextureIndex / 16) * 16, 16, 16, 256, 256);
+                    renderer.terrainTexture.Bind(0);
+                    renderer.terrainShader.SetUniformInt("uSampler", 0);
+                    std::vector<Vertex> verts;
+                    glEnable(GL_BLEND);
+                    this->renderer.DefaultBlendFunc();
+                    glBindVertexArray(this->renderer.m_guiVao);
+                    glBindBuffer(GL_ARRAY_BUFFER, this->renderer.m_guiVbo);
+                    this->RenderTileGui(verts, i);
+                    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * verts.size(), &verts[0], GL_DYNAMIC_DRAW);
+                    glDrawArrays(GL_TRIANGLES, 0, verts.size());
+                    glDisable(GL_BLEND);
+                    glBindVertexArray(0);
+                    glDisable(GL_DEPTH_TEST);
+                }
+                // this->renderer.DrawTexture(this->renderer.terrainTexture, scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3, scaledHeight - 22 + 3, 16, 16, (block->guiTextureIndex % 16) * 16, (block->guiTextureIndex / 16) * 16, 16, 16, 256, 256);
             }
         }
 
         if (this->m_menu != nullptr) {
+            renderer.texturedShader.SetUniformMat4("uModelView", modelView);
+
             this->m_menu->Render(this->m_mousePos[0] / scale, this->m_mousePos[1] / scale);
         }
     }
 
     void Application::RenderSelectionBox(std::vector<KM::Vertex3FColor4F> &vertices, KM::HitResult &hitResult) {
-        float x0 = -0.01f;
-        float y0 = -0.01f;
-        float z0 = -0.01f;
-        float x1 = 1.01f;
-        float y1 = 1.01f;
-        float z1 = 1.01f;
+        float x0 = -0.005f;
+        float y0 = -0.005f;
+        float z0 = -0.005f;
+        float x1 = 1.005f;
+        float y1 = 1.005f;
+        float z1 = 1.005f;
 
         vertices.push_back({ x0, y0, z0, 0, 0, 0, 0.4f });
         vertices.push_back({ x0, y1, z0, 0, 0, 0, 0.4f });
@@ -610,18 +612,6 @@ namespace KM {
 
         vertices.push_back({ x0, y1, z0, 0, 0, 0, 0.4f });
         vertices.push_back({ x0, y1, z1, 0, 0, 0, 0.4f });
-
-        vertices.push_back({ x0, y1, z0, 0, 0, 0, 0.4f });
-        vertices.push_back({ x1, y1, z0, 0, 0, 0, 0.4f });
-
-        vertices.push_back({ x0, y1, z0, 0, 0, 0, 0.4f });
-        vertices.push_back({ x0, y1, z1, 0, 0, 0, 0.4f });
-
-        vertices.push_back({ x0, y0, z0, 0, 0, 0, 0.4f });
-        vertices.push_back({ x0, y0, z1, 0, 0, 0, 0.4f });
-
-        vertices.push_back({ x0, y0, z0, 0, 0, 0, 0.4f });
-        vertices.push_back({ x1, y0, z0, 0, 0, 0, 0.4f });
 
         vertices.push_back({ x0, y0, z0, 0, 0, 0, 0.4f });
         vertices.push_back({ x0, y0, z1, 0, 0, 0, 0.4f });
@@ -645,11 +635,11 @@ namespace KM {
         vertices.push_back({ x1, y0, z1, 0, 0, 0, 0.4f });
     }
     
-    void Application::RenderTile(std::vector<KM::Vertex> &vertices, KM::World *world, BlockPos blockPos, int tile, int layer)
+    void Application::RenderTile(std::vector<KM::Vertex> &vertices, KM::World* world, BlockPos blockPos, int tile, int layer)
     {
         if (tile == 0 || tile >= BLOCK_COUNT) return;
 
-        BlockDef *block = &BLOCKS_DEFS[tile];
+        BlockDef* block = &BLOCKS_DEFS[tile];
 
         if (layer != block->renderLayer) {
             return;
@@ -878,37 +868,156 @@ namespace KM {
         }
     }
 
-    void Application::DrawTexture(int x, int y, int w, int h, int u, int v, int us, int vs, int tw, int th)
+    void Application::RenderTileGui(std::vector<KM::Vertex> &vertices, int tile)
     {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glBindVertexArray(this->m_guiVao);
-        glBindBuffer(GL_ARRAY_BUFFER, this->m_guiVbo);
+        if (tile == 0 || tile >= BLOCK_COUNT) return;
 
-        float u0 = (float) u / (float) tw;
-        float v0 = (float) v / (float) th;
-        float u1 = (float) (u + us) / (float) tw;
-        float v1 = (float) (v + vs) / (float) th;
+        BlockDef* block = &BLOCKS_DEFS[tile];
 
-        const float verts[] =
+
+        float x0 = 0.0f;
+        float y0 = 0.0f;
+        float z0 = 0.0f;
+        float x1 = 0.0f + 1.0f;
+        float y1 = 0.0f + 1.0f;
+        float z1 = 0.0f + 1.0f;
+
+
+        float bB = 0.5f;
+        float bT = 1.0f;
+        float bNS = 0.8f;
+        float bWE = 0.6f;
+
+        bool isExposed = tile == 5;
+
+        if (isExposed) {
+            y1 -= 0.1f;
+        }
+
+        // B
+
         {
-            x + 0.0f, y + 0.0f, 0.0f,    1, 1, 1, 1,      u0, v0,
-            x + 0.0f, y + h + 0.0f, 0.0f,    1, 1, 1, 1,      u0, v1,
-            x + w + 0.0f, y + h + 0.0f, 0.0f,    1, 1, 1, 1,      u1, v1,
-            x + w + 0.0f, y + h + 0.0f, 0.0f,    1, 1, 1, 1,      u1, v1,
-            x + w + 0.0f, y + 0.0f, 0.0f,    1, 1, 1, 1,      u1, v0,
-            x + 0.0f, y + 0.0f, 0.0f,    1, 1, 1, 1,      u0, v0
-        };
-        glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+            int u = ((block->textureIndex[0] % 16) * 16);
+            int v = ((block->textureIndex[0] / 16) * 16);
+            float u0 = u / 256.0f;
+            float v0 = v / 256.0f;
+            float u1 = (u + 16.f) / 256.0f;
+            float v1 = (v + 16.f) / 256.0f;
 
-        glDisable(GL_BLEND);
-        glBindVertexArray(0);
+            float b = bB;
+
+            vertices.push_back({ x0, y0, z1, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x0, y0, z0, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x1, y0, z0, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x1, y0, z0, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x1, y0, z1, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x0, y0, z1, b, b, b, 1, u0, v1 });
+        }
+        
+        // T
+
+        {
+            int u = ((block->textureIndex[1] % 16) * 16);
+            int v = ((block->textureIndex[1] / 16) * 16);
+            float u0 = u / 256.0f;
+            float v0 = v / 256.0f;
+            float u1 = (u + 16.f) / 256.0f;
+            float v1 = (v + 16.f) / 256.0f;
+
+            float b = bT;
+
+            vertices.push_back({ x1, y1, z1, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x1, y1, z0, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x0, y1, z0, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x0, y1, z0, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x0, y1, z1, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x1, y1, z1, b, b, b, 1, u1, v1 });
+        }
+
+        // N
+
+        {
+            int u = ((block->textureIndex[2] % 16) * 16);
+            int v = ((block->textureIndex[2] / 16) * 16);
+            float u0 = u / 256.0f;
+            float v0 = v / 256.0f;
+            float u1 = (u + 16.f) / 256.0f;
+            float v1 = (v + 16.f) / 256.0f;
+
+            float b = bNS;
+
+            vertices.push_back({ x0, y1, z0, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x1, y1, z0, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x1, y0, z0, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x1, y0, z0, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x0, y0, z0, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x0, y1, z0, b, b, b, 1, u1, v0 });
+        }
+
+        // S
+
+        {
+            int u = ((block->textureIndex[3] % 16) * 16);
+            int v = ((block->textureIndex[3] / 16) * 16);
+            float u0 = u / 256.0f;
+            float v0 = v / 256.0f;
+            float u1 = (u + 16.f) / 256.0f;
+            float v1 = (v + 16.f) / 256.0f;
+
+            float b = bNS;
+
+            vertices.push_back({ x0, y1, z1, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x0, y0, z1, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x1, y0, z1, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x1, y0, z1, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x1, y1, z1, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x0, y1, z1, b, b, b, 1, u0, v0 });
+        }
+
+        // W
+
+        {
+            int u = ((block->textureIndex[4] % 16) * 16);
+            int v = ((block->textureIndex[4] / 16) * 16);
+            float u0 = u / 256.0f;
+            float v0 = v / 256.0f;
+            float u1 = (u + 16.f) / 256.0f;
+            float v1 = (v + 16.f) / 256.0f;
+
+            float b = bWE;
+
+            vertices.push_back({ x0, y1, z1, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x0, y1, z0, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x0, y0, z0, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x0, y0, z0, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x0, y0, z1, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x0, y1, z1, b, b, b, 1, u1, v0 });
+        }
+
+        // E
+
+        {
+            int u = ((block->textureIndex[5] % 16) * 16);
+            int v = ((block->textureIndex[5] / 16) * 16);
+            float u0 = u / 256.0f;
+            float v0 = v / 256.0f;
+            float u1 = (u + 16.f) / 256.0f;
+            float v1 = (v + 16.f) / 256.0f;
+
+            float b = bWE;
+
+            vertices.push_back({ x1, y0, z1, b, b, b, 1, u0, v1 });
+            vertices.push_back({ x1, y0, z0, b, b, b, 1, u1, v1 });
+            vertices.push_back({ x1, y1, z0, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x1, y1, z0, b, b, b, 1, u1, v0 });
+            vertices.push_back({ x1, y1, z1, b, b, b, 1, u0, v0 });
+            vertices.push_back({ x1, y0, z1, b, b, b, 1, u0, v1 });
+        }
     }
 
     int Application::CalculateGuiScale(int width, int height) {
-       int scale;
-        for (scale = 1; scale != 4 && scale < width && scale < height && width / (scale + 1) >= 320 && height / (scale + 1) >= 240; ++scale) {
+        int scale;
+        for (scale = 1; scale != 3 && scale < width && scale < height && width / (scale + 1) >= 320 && height / (scale + 1) >= 240; ++scale) {
         }
         return scale;
     }

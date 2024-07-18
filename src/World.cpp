@@ -10,7 +10,7 @@
 #include <glm/glm.hpp>
 
 namespace KM {
-    void placeOakTree(KM::World *world, int x, int y, int z) {
+    void placeOakTree(KM::World* world, int x, int y, int z) {
         world->setBlockId(x, y, z, 9);
         world->setBlockId(x, y + 1, z, 9);
         world->setBlockId(x, y + 2, z, 9);
@@ -39,7 +39,7 @@ namespace KM {
         world->setBlockId(x, y + 6, z + 1, 7);
     }
 
-    void placeLake(KM::World *world, int x, int y, int z)
+    void placeLake(KM::World* world, int x, int y, int z)
     {
         for (int yy = 0; yy < 3; ++yy)
         {
@@ -372,13 +372,13 @@ namespace KM {
 		}
     }
 
-    void World::write(std::ofstream *out)
+    void World::write(std::ofstream* out)
     {
-        int *data = this->m_blocks.data();
+        int* data = this->m_blocks.data();
         out->write(reinterpret_cast<char*>(data), sizeof(int) * this->m_width * this->m_height * this->m_depth);
     }
 
-    Chunk::Chunk(World *world, int x0, int y0, int z0) {
+    Chunk::Chunk(World* world, int x0, int y0, int z0) {
         this->world = world;
         this->x0 = x0;
         this->y0 = y0;
