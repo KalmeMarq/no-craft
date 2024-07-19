@@ -14,6 +14,8 @@ add_subdirectory(libs/glm)
 
 include_directories("libs/stb")
 
+find_package(OpenAL CONFIG REQUIRED)
+
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 add_executable(
@@ -25,8 +27,11 @@ target_link_libraries(
     km-opengl
     glfw
     glm
-    glad    
+    glad
+    ${OPENAL_LIBRARY}
 )
+
+target_include_directories(km-opengl PUBLIC ${OPENAL_INCLUDE_DIR})
 
 target_compile_definitions(km-opengl PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/res/")
 # target_compile_definitions(km-opengl PUBLIC RESOURCES_PATH="./res/")

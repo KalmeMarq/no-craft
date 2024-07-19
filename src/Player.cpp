@@ -42,8 +42,13 @@ namespace KM {
 
         Application* app = Application::GetInstance();
         
-        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && (this->onGround || this->isInsideWater)) {
+        if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_SPACE) != GLFW_RELEASE && this->onGround) {
             this->yd = 0.12f;
+
+            if (this->isInsideWater)
+            {
+                this->yd += 0.04f;
+            }
         }
 
         if (glfwGetKey(app->window.GetHandle(), GLFW_KEY_LEFT_SHIFT) != GLFW_RELEASE || glfwGetKey(app->window.GetHandle(), GLFW_KEY_RIGHT_SHIFT) != GLFW_RELEASE && !this->onGround) {
@@ -70,7 +75,7 @@ namespace KM {
         this->yd -= 0.005f;
         this->move(this->xd, this->yd, this->zd);
         this->xd *= 0.91f;
-        this->yd *= this->isInsideWater ? 0.99f : 0.98f;
+        this->yd *= 0.98f;
         this->zd *= 0.91f;
 
         this->isInsideWater = this->world->getBlockId(this->x, this->y, this->z) == 5;
