@@ -25,6 +25,8 @@ namespace KM {
         int getHeight();
         int getDepth();
 
+        void Tick();
+
         bool isInBounds(int x, int y, int z);
 
         void recalculateLightDepths(int x0, int y0, int x1, int y1);
@@ -40,6 +42,7 @@ namespace KM {
         int m_width;
         int m_height;
         int m_depth;
+        int m_ticks { 0 };
         std::vector<int> m_blocks;
         std::vector<int> m_lightDepths;
     };

@@ -38,6 +38,9 @@ namespace KM {
         static Application* appInstance;
         GameWindow window;
         Renderer renderer;
+        bool m_mouseGrabbed { false };
+        int m_hotbar[9] { 0 };
+        int m_selectedItem { 0 };
     private:
         void Render();
         void Tick();
@@ -51,8 +54,6 @@ namespace KM {
         bool m_running { true };
         bool m_showDebugInfo { false };
         Player* m_player { nullptr };
-        int m_selectedItem { 0 };
-        bool m_mouseGrabbed { false };
         double m_mousePos[2] = {0};
         double m_mouseDelta[2] = {0};
         std::optional<HitResult> m_hitResult = std::nullopt;

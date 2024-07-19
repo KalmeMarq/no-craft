@@ -123,6 +123,28 @@ namespace KM {
         return this->m_depth;
     }
 
+    void World::Tick()
+    {
+        this->m_ticks++;
+
+        if (this->m_ticks % 10 == 0)
+        {
+            for (int y = 0; y < this->m_depth; ++y) {
+                for (int z = 0; z < this->m_height; ++z) {
+                    for (int x = 0; x < this->m_width; ++x) {
+                        if (this->getBlockId(x, y, z) == 5)
+                        {
+                            if (this->getBlockId(x, y - 1, z) == 0)
+                            {
+                                this->setBlockId(x, y - 1, z, 5);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void World::recalculateLightDepths(int x0, int y0, int x1, int y1)
     {
         for (int x = x0; x < x0 + x1; ++x) {

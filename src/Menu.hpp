@@ -24,7 +24,7 @@ namespace KM {
         virtual void ActionPerformed(Button &button);
         virtual void Resize(int width, int height);
         virtual void Render(int mouseX, int mouseY);
-        void MouseClicked(int mouseX, int mouseY, int button);
+        virtual bool MouseClicked(int mouseX, int mouseY, int button);
     protected:
         int width;
         int height;
@@ -56,5 +56,8 @@ namespace KM {
         void Resize(int width, int height) override;
         void ActionPerformed(Button &button) override;
         void Render(int mouseX, int mouseY) override;
+        bool MouseClicked(int mouseX, int mouseY, int button) override;
+    private:
+        int hoveredSlot { -1 };
     };
 }

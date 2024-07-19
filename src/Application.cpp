@@ -3,26 +3,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Application.hpp"
-
-struct BlockDef {
-    int guiTextureIndex;
-    int textureIndex[6];
-    int renderLayer;
-};
-
-#define BLOCK_COUNT 10
-static BlockDef BLOCKS_DEFS[BLOCK_COUNT] = {
-    { 0, { 0 }, 0 }, // Air
-    { 3, { 2, 0, 3, 3, 3, 3 }, 0 }, // Grass
-    { 2, { 2, 2, 2, 2, 2, 2 }, 0 }, // Dirt
-    { 1, { 1, 1, 1, 1, 1, 1 }, 0 }, // Stone
-    { 4, { 4, 4, 4, 4, 4, 4 }, 0 }, // Planks
-    { 18, { 18, 18, 18, 18, 18, 18 }, 2 }, // Water
-    { 17, { 17, 17, 17, 17, 17, 17 }, 0 }, // Bedrock
-    { 22, { 22, 22, 22, 22, 22, 22 }, 1 }, // Leaves
-    { 49, { 49, 49, 49, 49, 49, 49 }, 1 }, // Glass
-    { 20, { 21, 21, 20, 20, 20, 20 }, 0 } // Log
-};
+#include "Block.hpp"
 
 int directionNormalVectors[6][3] = {
     { 0, -1, 0 },
@@ -67,8 +48,18 @@ namespace KM {
 
         renderer.Init();
 
-        std::cout << "Creating Chunks\n";
-        // this->StartWorld();
+        std::cout << "Initializing Blocks\n";
+        InitBlockDefs();
+
+        this->m_hotbar[0] = 1;
+        this->m_hotbar[1] = 2;
+        this->m_hotbar[2] = 3;
+        this->m_hotbar[3] = 4;
+        this->m_hotbar[4] = 10;
+        this->m_hotbar[5] = 6;
+        this->m_hotbar[6] = 7;
+        this->m_hotbar[7] = 8;
+        this->m_hotbar[8] = 9;
 
         std::cout << "Build Selection Box Geometry\n";
 
@@ -147,7 +138,6 @@ namespace KM {
 
     void Application::OnResize()
     {
-        std::cout << "Viewport Resized";
         glViewport(0, 0, this->window.GetWidth(), this->window.GetHeight());
 
         if (this->m_menu != nullptr)
@@ -160,6 +150,9 @@ namespace KM {
     void Application::OnKey(int key, int scancode, int action, int mods)
     {
         if (key == GLFW_KEY_B && action == GLFW_RELEASE) {
+            glfwSetInputMode(this->window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            glfwSetCursorPos(this->window.GetHandle(), this->window.GetWidth() / 2, this->window.GetHeight() / 2);
+            this->m_mouseGrabbed = false;
             this->SetMenu(new InventoryMenu());
         }
 
@@ -188,10 +181,11 @@ namespace KM {
         if (this->m_menu != nullptr && action == GLFW_PRESS)
         {
             int scale = CalculateGuiScale(this->window.GetWidth(), this->window.GetHeight());
-            this->m_menu->MouseClicked(this->m_mousePos[0] / scale, this->m_mousePos[1] / scale, button);
+            if (this->m_menu->MouseClicked(this->m_mousePos[0] / scale, this->m_mousePos[1] / scale, button))
+                return;
         }
 
-        if (button == 1 && action == GLFW_RELEASE) {
+        if (button == 1 && action == GLFW_PRESS) {
             if (m_mouseGrabbed && m_hitResult.has_value()) {
                 int dX = m_hitResult.value().x;
                 int dY = m_hitResult.value().y;
@@ -206,7 +200,7 @@ namespace KM {
                 if (this->m_player->bb.intersects({ (float) dX, (float) dY, (float) dZ, dX + 1.0f, dY + 0.5f, dZ + 1.0f }))
                     return;
 
-                m_world->setBlockId(dX, dY, dZ, m_selectedItem + 1);
+                m_world->setBlockId(dX, dY, dZ, this->m_hotbar[this->m_selectedItem]);
                 m_world->recalculateLightDepths(dX, dZ, 1, 1);
 
                 int chunksX = m_world->getWidth() / 16;
@@ -239,7 +233,7 @@ namespace KM {
             }
         }
 
-        if (button == 0 && action == GLFW_RELEASE) {
+        if (button == 0 && action == GLFW_PRESS) {
             if (!m_mouseGrabbed) {
                 // glfwSetInputMode(window.GetHandle(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 // m_mouseGrabbed = true;
@@ -544,6 +538,8 @@ namespace KM {
                 renderer.DrawAlignedTextWithShadow(version, scaledWidth - 2, 22, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
             } else {
                 renderer.DrawTextWithShadow("NoCraft", 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+                renderer.DrawAlignedTextWithShadow("F3 for Debug Info", scaledWidth - 2, 2, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+                renderer.DrawAlignedTextWithShadow("B to Open Inventory", scaledWidth - 2, 12, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
             }
 
             glEnable(GL_BLEND);
@@ -552,12 +548,11 @@ namespace KM {
             this->renderer.DrawTexture(this->renderer.m_guiTexture, scaledWidth / 2 - 91 + m_selectedItem * 20 + 1 - 2, scaledHeight - 22 - 1, 24, 24, 0, 22, 24, 24, 256, 256);
             glDisable(GL_BLEND);
 
-            for (int i = 0; i < BLOCK_COUNT; ++i) {
-                BlockDef* block = &BLOCKS_DEFS[i + 1];
+            for (int i = 0; i < 9; ++i) {
                 {
                     glEnable(GL_DEPTH_TEST);
                     glm::mat4 mv = modelView;
-                    mv = glm::translate(mv, glm::vec3(scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3 - 29, scaledHeight - 22 + 2 + 8.5f, 10));
+                    mv = glm::translate(mv, glm::vec3(scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3 - 9, scaledHeight - 22 + 2 + 8.5f, 10));
                     mv = glm::scale(mv, glm::vec3(10, 10, 10));
                     mv = glm::translate(mv, glm::vec3(1.0f, 0.5f, 1.0f));
                     mv = glm::scale(mv, glm::vec3(1.0f, 1.0f, -1.0f));
@@ -572,14 +567,13 @@ namespace KM {
                     this->renderer.DefaultBlendFunc();
                     glBindVertexArray(this->renderer.m_guiVao);
                     glBindBuffer(GL_ARRAY_BUFFER, this->renderer.m_guiVbo);
-                    this->RenderTileGui(verts, i);
+                    this->RenderTileGui(verts, this->m_hotbar[i]);
                     glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * verts.size(), &verts[0], GL_DYNAMIC_DRAW);
                     glDrawArrays(GL_TRIANGLES, 0, verts.size());
                     glDisable(GL_BLEND);
                     glBindVertexArray(0);
                     glDisable(GL_DEPTH_TEST);
                 }
-                // this->renderer.DrawTexture(this->renderer.terrainTexture, scaledWidth / 2 - 91 + 1 + i * 20 - 1 + 3, scaledHeight - 22 + 3, 16, 16, (block->guiTextureIndex % 16) * 16, (block->guiTextureIndex / 16) * 16, 16, 16, 256, 256);
             }
         }
 
@@ -639,7 +633,7 @@ namespace KM {
     {
         if (tile == 0 || tile >= BLOCK_COUNT) return;
 
-        BlockDef* block = &BLOCKS_DEFS[tile];
+        BlockDefinition* block = &Blocks[tile];
 
         if (layer != block->renderLayer) {
             return;
@@ -677,7 +671,7 @@ namespace KM {
         // Credits: https://github.com/simondevyoutube/Quick_MinecraftClone2/blob/f911091c593e78a06ec59b3f49656d6a3b8f4a79/src/voxel-block-builder.js#L955
         auto calcAO = [world, blockPos](int x, int y, int z) {
             int bId = world->getBlockId(blockPos.x + x, blockPos.y + y, blockPos.z + z);
-            if (bId != 0 && bId != 8) {
+            if (bId != 0 && Blocks[bId].useAO) {
                 return 0.75f;
             }
           return 1.0f;
@@ -872,8 +866,7 @@ namespace KM {
     {
         if (tile == 0 || tile >= BLOCK_COUNT) return;
 
-        BlockDef* block = &BLOCKS_DEFS[tile];
-
+        BlockDefinition* block = &Blocks[tile];
 
         float x0 = 0.0f;
         float y0 = 0.0f;
